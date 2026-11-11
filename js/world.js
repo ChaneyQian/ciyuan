@@ -1,4 +1,4 @@
-/* 墨韵 · world.js — 世界：万物的容器 + 天象、山水、时令
+/* 词源 · world.js — 世界：万物的容器 + 天象、山水、时令
  * 每一种「灵」是 MS.Kinds 里的一项：{ z, max, life, create(w,e), update(e,dt,w), draw(e,ctx,w) }
  * 颜色一律经 w.col(name, alpha) 取得，昼夜自动过渡——以后切换「世界风格」也从这里换皮。
  */

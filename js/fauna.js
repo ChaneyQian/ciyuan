@@ -1,4 +1,4 @@
-/* 墨韵 · fauna.js — 禽鸟虫鱼：鸟 燕 雁 莺 鹤 蝶 虫 鱼 龙 */
+/* 词源 · fauna.js — 禽鸟虫鱼：鸟 燕 雁 莺 鹤 蝶 虫 鱼 龙 */
 (function () {
   'use strict';
   const MS = window.MS, Kinds = MS.Kinds;

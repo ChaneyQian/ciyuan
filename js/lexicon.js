@@ -1,4 +1,4 @@
-/* 墨韵 · lexicon.js — 词库：全部取自《声律启蒙》
+/* 词源 · lexicon.js — 词库：全部取自《声律启蒙》
  * MS.CHARS   可以「活过来」的字：它化成什么（kind）、平仄（tone）、字源（note）、别名（alias）
  * MS.Lex     从《声律启蒙》全文（shenglv-data.js）里算出：对仗关系、可引的句子
  */

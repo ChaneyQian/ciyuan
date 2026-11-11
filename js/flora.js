@@ -1,4 +1,4 @@
-/* 墨韵 · flora.js — 草木：竹 松 柳 梅 花 荷 菊 草 */
+/* 词源 · flora.js — 草木：竹 松 柳 梅 花 荷 菊 草 */
 (function () {
   'use strict';
   const MS = window.MS, Kinds = MS.Kinds;

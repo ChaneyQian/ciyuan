@@ -1,4 +1,4 @@
-/* 墨韵 · main.js — 把纸、字、灵、声接在一起 */
+/* 词源 · main.js — 把纸、字、灵、声接在一起 */
 (function () {
   'use strict';
   const MS = window.MS;
@@ -186,7 +186,7 @@
       if (!blob) return;
       const a = document.createElement('a'), d = new Date(), p = (n) => String(n).padStart(2, '0');
       a.href = URL.createObjectURL(blob);
-      a.download = '墨韵-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds()) + '.png';
+      a.download = '词源-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds()) + '.png';
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(a.href), 4000);
     }, 'image/png');
@@ -206,7 +206,7 @@
     g.beginPath(); g.roundRect ? g.roundRect(x, y, s, s * 1.9, 4 * k) : g.rect(x, y, s, s * 1.9); g.fill();
     g.fillStyle = '#f6ecdc'; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.font = (s * 0.62) + 'px "Ma Shan Zheng","STKaiti","KaiTi",serif';
-    g.fillText('墨', x + s / 2, y + s * 0.52); g.fillText('韵', x + s / 2, y + s * 1.36);
+    g.fillText('词', x + s / 2, y + s * 0.52); g.fillText('源', x + s / 2, y + s * 1.36);
     if (state.verse) {
       g.fillStyle = world.night ? 'rgba(226,224,210,.75)' : 'rgba(30,28,26,.72)';
       g.font = (17 * k) + 'px "Ma Shan Zheng","STKaiti","KaiTi",serif';
@@ -347,9 +347,9 @@
   /* ---------- 开卷：题名二字，化入纸中 ---------- */
   function intro() {
     const y = state.H * 0.42, g = glyphSize() * 0.58;
-    commit('墨', state.W / 2 - g, y, 'quick');
-    setTimeout(() => commit('韵', state.W / 2 + g, y, 'quick'), 380);
-    state.seen.delete('墨'); state.seen.delete('韵');
+    commit('词', state.W / 2 - g, y, 'quick');
+    setTimeout(() => commit('源', state.W / 2 + g, y, 'quick'), 380);
+    state.seen.delete('词'); state.seen.delete('源');
   }
   const start = () => {
     Glyphs.refreshFonts();
@@ -357,6 +357,6 @@
     else window.addEventListener('resize', function once() { if (state.W > 200 && state.H > 200) { window.removeEventListener('resize', once); intro(); } });
   };
   if (document.fonts && document.fonts.load) {
-    Promise.race([document.fonts.load('30px "Ma Shan Zheng"', '墨韵'), new Promise((r) => setTimeout(r, 1200))]).then(start, start);
+    Promise.race([document.fonts.load('30px "Ma Shan Zheng"', '词源'), new Promise((r) => setTimeout(r, 1200))]).then(start, start);
   } else start();
 })();

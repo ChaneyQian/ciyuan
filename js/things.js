@@ -1,4 +1,4 @@
-/* 墨韵 · things.js — 器物：舟 楼 钟 鼓 剑 火 灯 */
+/* 词源 · things.js — 器物：舟 楼 钟 鼓 剑 火 灯 */
 (function () {
   'use strict';
   const MS = window.MS, Kinds = MS.Kinds;
