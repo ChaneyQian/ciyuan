@@ -25,9 +25,10 @@
   function noise1(x) { const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f); return lerp(hash1(i), hash1(i + 1), u); }
 
   /* 一笔：沿折线画一条粗细渐变的墨线（填充多边形）。pts=[x0,y0,x1,y1,...] */
-  function brush(ctx, pts, w0, w1, upto) {
+  /* 只描出这一笔的轮廓（不填）：要描边、要裁剪时用 */
+  function brushPath(ctx, pts, w0, w1, upto, smooth) {
     const n = pts.length / 2;
-    if (n < 2) return;
+    if (n < 2) return false;
     const m = upto == null ? n : clamp(Math.ceil(upto * (n - 1)) + 1, 2, n);
     const L = [], R = [];
     for (let i = 0; i < m; i++) {
@@ -39,12 +40,23 @@
       R.push(pts[i * 2] + dy * hw, pts[i * 2 + 1] - dx * hw);
     }
     ctx.beginPath();
+    if (smooth && m > 2) {
+      // 圆润的轮廓：把外框各点当控制点，曲线穿过相邻两点的中点（笔锋是圆的，不是折线）
+      const O = L.slice();
+      for (let i = m - 1; i >= 0; i--) O.push(R[i * 2], R[i * 2 + 1]);
+      const k = O.length / 2;
+      ctx.moveTo((O[k * 2 - 2] + O[0]) / 2, (O[k * 2 - 1] + O[1]) / 2);
+      for (let i = 0; i < k; i++) { const j = (i + 1) % k; ctx.quadraticCurveTo(O[i * 2], O[i * 2 + 1], (O[i * 2] + O[j * 2]) / 2, (O[i * 2 + 1] + O[j * 2 + 1]) / 2); }
+      ctx.closePath();
+      return true;
+    }
     ctx.moveTo(L[0], L[1]);
     for (let i = 1; i < m; i++) ctx.lineTo(L[i * 2], L[i * 2 + 1]);
     for (let i = m - 1; i >= 0; i--) ctx.lineTo(R[i * 2], R[i * 2 + 1]);
     ctx.closePath();
-    ctx.fill();
+    return true;
   }
+  function brush(ctx, pts, w0, w1, upto, smooth) { if (brushPath(ctx, pts, w0, w1, upto, smooth)) ctx.fill(); }
   /* 一片叶：从 (x,y) 沿 ang 方向长 len，最宽 wid */
   function leafPath(ctx, x, y, ang, len, wid, bend) {
     const c = Math.cos(ang), s = Math.sin(ang), b = bend || 0;
@@ -61,7 +73,7 @@
     ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
   }
 
-  MS.util = { mulberry, clamp, lerp, ease, easeOut, hash1, noise1, brush, leafPath, softDot, TAU };
+  MS.util = { mulberry, clamp, lerp, ease, easeOut, hash1, noise1, brush, brushPath, leafPath, softDot, TAU };
 
   /* ---------- 调色 ---------- */
   const PAL = {
@@ -76,7 +88,8 @@
     blue:   [[58, 92, 132],    [130, 176, 230]],
     paper:  [[236, 230, 216],  [9, 12, 17]],
     white:  [[252, 250, 244],  [240, 240, 232]],
-    warm:   [[240, 170, 80],   [255, 196, 110]]
+    warm:   [[240, 170, 80],   [255, 196, 110]],
+    cream:  [[236, 214, 164],  [252, 238, 196]]
   };
 
   /* ---------- 世界 ---------- */

@@ -7,6 +7,7 @@
   /* 墨圈：钟鼓之声在纸上荡开 */
   function rings(e, ctx, w, x, y, color) {
     for (const r of e.rings) {
+      if (r.a < 0) continue;            // 第二圈晚半拍才荡开
       const u = r.a / r.life;
       ctx.strokeStyle = w.col(color || 'ink', 0.3 * (1 - u));
       ctx.lineWidth = 2.2 * (1 - u) + 0.4;
@@ -133,11 +134,11 @@
       ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 12); ctx.stroke();
       // 钟体（合瓦形，于口上弧）
       const gr = ctx.createLinearGradient(-24, 0, 24, 0);
-      gr.addColorStop(0, w.col('green', 0.95)); gr.addColorStop(0.45, w.col('leaf', 0.8)); gr.addColorStop(1, w.col('green', 0.98));
+      gr.addColorStop(0, w.col('green', 0.66)); gr.addColorStop(0.45, w.col('leaf', 0.36)); gr.addColorStop(1, w.col('green', 0.74));
       ctx.fillStyle = gr;
       ctx.beginPath(); ctx.moveTo(-14, 12); ctx.lineTo(14, 12); ctx.quadraticCurveTo(20, 40, 27, 66); ctx.quadraticCurveTo(0, 52, -27, 66); ctx.quadraticCurveTo(-20, 40, -14, 12); ctx.fill();
-      ctx.strokeStyle = w.ink(0.7); ctx.lineWidth = 1; ctx.stroke();
-      ctx.fillStyle = w.ink(0.55);     // 枚
+      ctx.strokeStyle = w.ink(0.42); ctx.lineWidth = 1; ctx.stroke();
+      ctx.fillStyle = w.ink(0.5);      // 枚
       ctx.beginPath();
       for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) for (const s of [-1, 1]) { const x = s * (5 + c * 4.6 + r * 0.9), y = 20 + r * 8; ctx.moveTo(x + 1.3, y); ctx.arc(x, y, 1.3, 0, TAU); }
       ctx.fill();
@@ -174,10 +175,10 @@
       ctx.beginPath(); ctx.moveTo(-22, 16); ctx.lineTo(-32, 44); ctx.moveTo(22, 16); ctx.lineTo(32, 44); ctx.moveTo(-28, 34); ctx.lineTo(28, 34); ctx.stroke();
       // 鼓身
       const gr = ctx.createLinearGradient(-34, 0, 34, 0);
-      gr.addColorStop(0, w.col('red', 0.95)); gr.addColorStop(0.5, w.col('orange', 0.85)); gr.addColorStop(1, w.col('red', 0.98));
+      gr.addColorStop(0, w.col('red', 0.68)); gr.addColorStop(0.5, w.col('red', 0.34)); gr.addColorStop(1, w.col('red', 0.76));
       ctx.fillStyle = gr;
       ctx.beginPath(); ctx.moveTo(-30, -14); ctx.quadraticCurveTo(-40, 3, -30, 20); ctx.lineTo(30, 20); ctx.quadraticCurveTo(40, 3, 30, -14); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = w.col('yellow', 0.95);   // 鼓钉
+      ctx.fillStyle = w.ink(0.6);              // 鼓钉
       ctx.beginPath();
       for (let i = 0; i < 9; i++) { const x = -28 + i * 7; ctx.moveTo(x + 1.5, -9); ctx.arc(x, -9, 1.5, 0, TAU); ctx.moveTo(x + 1.5, 15); ctx.arc(x, 15, 1.5, 0, TAU); }
       ctx.fill();

@@ -11,18 +11,25 @@
   const ctx = stage.getContext('2d');
   const fluid = new MS.Fluid(inkCanvas);
   const world = new MS.World(fluid);
-  const Audio = MS.Audio, Lex = MS.Lex, Glyphs = MS.Glyphs;
+  const Audio = MS.Audio, Lex = MS.Lex, Glyphs = MS.Glyphs, Hand = MS.Hand;
   MS.world = world; MS.fluid = fluid;
 
   const state = {
     W: 1, H: 1, dpr: 1,
-    trace: true, sound: false, soundTouched: false, auto: false,
+    trace: false,                // 溯源：字形从楷书退回甲骨文（默认关）
+    hand: false,                 // 手写：在纸上写字，由程序判定
+    pinyin: false,               // 拼音：不靠系统输入法，直接敲拼音
+    sound: false, soundTouched: false, auto: false,
     ink: 0,                      // 0 墨 1 朱 2 青
     seen: new Set(),             // 已经完整溯过源的字
     px: -999, py: -999, down: false, lastMove: 0,
     verse: '', verseT: 0
   };
   const PIG = [[0.42, 0, 0], [0, 0.5, 0], [0, 0, 0.5]];
+  /* 三个开关记在本机，下次打开还是上次的样子 */
+  const PREFS = 'ciyuan.prefs';
+  try { const p = JSON.parse(localStorage.getItem(PREFS) || '{}'); for (const k of ['trace', 'hand', 'pinyin']) if (typeof p[k] === 'boolean') state[k] = p[k]; } catch (err) { /* 存不了就算了 */ }
+  function savePrefs() { try { localStorage.setItem(PREFS, JSON.stringify({ trace: state.trace, hand: state.hand, pinyin: state.pinyin })); } catch (err) { /* 同上 */ } }
 
   /* ---------- 尺寸 ---------- */
   function resize() {
@@ -38,13 +45,13 @@
 
   /* ---------- 落字 ---------- */
   function glyphSize() { return clamp(Math.min(state.W, state.H) * 0.22, 120, 230); }
-  function commit(ch, x, y, forceMode) {
+  function commit(ch, x, y, forceMode, hand) {
     const key = Lex.canon[ch], def = key && MS.CHARS[key];
     let mode = forceMode || (!state.trace ? 'plain' : state.seen.has(ch) ? 'quick' : 'full');
     state.seen.add(ch);
     const pan = (x / state.W * 2 - 1) * 0.7;
     Glyphs.add(ch, x, y, {
-      mode, size: glyphSize(), world, known: !!def, note: def && key === ch ? def.note : null,
+      mode, hand, size: glyphSize(), world, known: !!def, note: def && key === ch ? def.note : null,
       onStage(idx, n, id) {
         if (idx === 0) Audio.play('tone', { tone: def ? def.tone : '平', i: def ? 2 + (key.charCodeAt(0) % 5) : 3 });
         else Audio.play('stage', { idx });
@@ -146,7 +153,26 @@
   /* 第一次动手时把声音打开（浏览器要求先有用户手势）；用户自己关过就不再自作主张 */
   function wake() { if (!state.soundTouched) { state.soundTouched = true; setSound(true); } }
   $('btn-sound').addEventListener('click', () => { state.soundTouched = true; setSound(!state.sound); });
-  $('btn-trace').addEventListener('click', () => { state.trace = !state.trace; press($('btn-trace'), state.trace); });
+  $('btn-trace').addEventListener('click', () => { state.trace = !state.trace; applyModes(); });
+  $('btn-hand').addEventListener('click', () => { state.hand = !state.hand; applyModes(); });
+  $('btn-pinyin').addEventListener('click', () => { state.pinyin = !state.pinyin; applyModes(); ime.focus({ preventScroll: true }); });
+  const touchOnly = !window.matchMedia('(hover: hover)').matches;
+  function applyModes() {
+    press($('btn-trace'), state.trace); press($('btn-hand'), state.hand); press($('btn-pinyin'), state.pinyin);
+    Hand.setEnabled(state.hand);
+    if (!state.pinyin) pyClear();
+    document.body.classList.toggle('hand', state.hand);
+    // 纸边的提示跟着模式变
+    const parts = [];
+    if (state.pinyin) parts.push('拼音已开：直接敲 shan、yue、long');
+    else if (!touchOnly) parts.push('键盘直接打字，字会活过来');
+    if (state.hand) parts.push('手写已开：在纸上写一个字，停笔即判');
+    else parts.push('点字落笔', '拖动落墨');
+    if (!touchOnly) parts.push('按住 Shift 泼水');
+    const box = $('hint-mode'); box.textContent = '';
+    for (const t of parts) { box.append(t); const dot = document.createElement('i'); dot.textContent = '·'; box.appendChild(dot); }
+    savePrefs();
+  }
   $('btn-auto').addEventListener('click', () => { wake(); setAuto(!state.auto); });
   $('btn-shot').addEventListener('click', snapshot);
   document.querySelectorAll('.hint b').forEach((b) => b.addEventListener('click', () => setInk(+b.dataset.ink)));
@@ -175,7 +201,7 @@
     if (auto.ci === 0) showVerse({ text: step.text, rhyme: st.rhyme }, new Set(step.chars), '声律启蒙 · ' + st.vol + ' · ' + st.rhyme);
     if (auto.ci < step.chars.length) {
       const ch = step.chars[auto.ci++], p = world.placeFor(ch);
-      commit(ch, p.x, p.y, state.trace && !state.seen.has(ch) ? 'full' : 'quick');
+      commit(ch, p.x, p.y);
       auto.timer = 2.8;
     } else { auto.si++; auto.ci = 0; auto.timer = step.chars.length ? 2.4 : 3.4; }
   }
@@ -227,6 +253,7 @@
     moveIme(e.clientX, e.clientY);
     if (e.pointerType === 'mouse') { e.preventDefault(); ime.focus({ preventScroll: true }); }
     if (e.shiftKey) splash(e.clientX, e.clientY);
+    else if (state.hand) Hand.down(e.clientX, e.clientY);
     else {
       fluid.splat(e.clientX, e.clientY, 0, 0, PIG[state.ink], 15);
       Audio.play('ink', { i: Math.round((1 - e.clientY / state.H) * 9), pan: (e.clientX / state.W * 2 - 1) * 0.7 });
@@ -247,6 +274,7 @@
     if (!ime.matches(':focus') || !composing) moveIme(x, y);
     if (state.down) {
       if (e.shiftKey) splash(x, y);
+      else if (state.hand) Hand.move(x, y);
       else {
         const k = clamp(sp / 900, 0.25, 1), p = PIG[state.ink];
         const steps = Math.min(6, Math.ceil(Math.hypot(x - lastX, y - lastY) / 14)) || 1;
@@ -260,7 +288,13 @@
     }
     lastX = x; lastY = y; lastT = t;
   });
-  const up = () => { state.down = false; };
+  const up = () => { state.down = false; Hand.up(); };
+  /* 手写判定的结果 */
+  Hand.onCommit = (ch, cx, cy, pts) => { wake(); commit(ch, cx, cy, undefined, pts); };
+  Hand.onReject = (strokes) => {            // 认不出：手迹化成真的墨
+    const p = PIG[state.ink];
+    for (const s of strokes) for (let i = 0; i < s.length; i += 6) fluid.splat(s[i], s[i + 1], 0, 0, [p[0] * 0.5, p[1] * 0.5, p[2] * 0.5], 9);
+  };
   window.addEventListener('pointerup', up);
   window.addEventListener('pointercancel', up);
   window.addEventListener('blur', up);
@@ -268,11 +302,47 @@
   /* ---------- 字：键盘与输入法 ---------- */
   let composing = false;
   const isHan = (c) => /[㐀-鿿豈-﫿]/.test(c);
+  /* 内置拼音：只认 44 个能活的字。字母进缓冲，空格 / 数字选字，整拼唯一时自动落字 */
+  const py = { buf: '', list: [], timer: 0, x: 0, y: 0 }, pyEl = $('py');
+  function pyRender() {
+    if (!py.buf) { pyEl.className = ''; return; }
+    pyEl.textContent = '';
+    const b = document.createElement('span'); b.className = 'buf'; b.textContent = py.buf; pyEl.appendChild(b);
+    if (!py.list.length) { const n = document.createElement('span'); n.className = 'none'; n.textContent = '无此字'; pyEl.appendChild(n); }
+    py.list.slice(0, 9).forEach((ch, i) => {
+      const c = document.createElement('button'); c.type = 'button';
+      const k = document.createElement('i'); k.textContent = i + 1; c.append(k, ch);
+      c.addEventListener('click', () => { pyPick(i); ime.focus({ preventScroll: true }); });
+      pyEl.appendChild(c);
+    });
+    pyEl.className = 'show';
+    pyEl.style.left = clamp(py.x + 14, 8, state.W - 260) + 'px'; pyEl.style.top = clamp(py.y + 20, 8, state.H - 60) + 'px';
+  }
+  function pySet(buf) {
+    if (!py.buf && buf) { py.x = state.px > 0 ? state.px : state.W / 2; py.y = state.py > 0 ? state.py : state.H * 0.45; }
+    py.buf = buf;
+    const r = buf ? Lex.pinyin(buf) : { list: [], exact: false };
+    py.list = r.list; py.timer = r.exact ? 0.3 : 0;
+    pyRender();
+  }
+  function pyClear() { py.buf = ''; py.list = []; py.timer = 0; pyEl.className = ''; }
+  function pyPick(i) {
+    const ch = py.list[i], x = py.x, y = py.y;
+    if (!ch) return;
+    pyClear(); wake(); commit(ch, x, y);
+  }
   function typed(text) {
     let n = 0;
     const x0 = state.px > 0 ? state.px : state.W / 2, y0 = state.py > 0 ? state.py : state.H * 0.45, gap = glyphSize() * 0.95;
     const hans = Array.from(text).filter(isHan);
     for (const c of Array.from(text)) {
+      if (state.pinyin) {
+        if (/[a-zA-Z]/.test(c)) { if (py.buf.length < 6) pySet(py.buf + c.toLowerCase()); continue; }
+        if (py.buf) {
+          if (c === ' ') pyPick(0); else if (/[1-9]/.test(c)) pyPick(+c - 1);
+          continue;
+        }
+      }
       if (c === '1' || c === '2' || c === '3') { setInk(+c - 1); continue; }
       if (!isHan(c)) continue;
       // 一次打出一个词：从笔尖起一字排开
@@ -290,6 +360,11 @@
   });
   window.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (py.buf && !composing) {
+      if (e.key === 'Backspace') { e.preventDefault(); pySet(py.buf.slice(0, -1)); return; }
+      if (e.key === 'Escape') { e.preventDefault(); pyClear(); return; }
+      if (e.key === 'Enter') { e.preventDefault(); pyPick(0); return; }
+    }
     if (document.activeElement !== ime && !(document.activeElement && document.activeElement.tagName === 'BUTTON' && (e.key === ' ' || e.key === 'Enter' || e.key === 'Tab'))) ime.focus({ preventScroll: true });
   });
   window.addEventListener('paste', (e) => { const t = (e.clipboardData || window.clipboardData).getData('text'); if (t) { e.preventDefault(); typed(t.slice(0, 12)); } });
@@ -315,13 +390,16 @@
     const dt = Math.min(0.034, Math.max(0.001, (now - last) / 1000));
     watchSpeed(now - last);
     last = now;
-    tick(dt);
+    // 哪一个灵画错了，都不能让整幅画停下来
+    try { tick(dt); } catch (err) { if (!frame.warned) { frame.warned = true; console.error(err); } }
     requestAnimationFrame(frame);
   }
   /* 手动推进若干帧（调试 / 自动化测试用：标签页在后台时浏览器会停掉动画帧） */
   MS.step = function (n, dt) { for (let i = 0; i < (n || 1); i++) tick(dt || 1 / 60); };
   function tick(dt) {
     tickAuto(dt);
+    if (py.timer > 0 && (py.timer -= dt) <= 0) pyPick(0);
+    Hand.update(dt);
     world.update(dt);
     Glyphs.update(dt);
     fluid.step(dt);
@@ -329,6 +407,7 @@
     ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
     ctx.clearRect(0, 0, state.W, state.H);
     world.draw(ctx);
+    Hand.draw(ctx, world);
     Glyphs.draw(ctx);
     // 世界里的事 → 声
     if (world.events.length) {
@@ -342,17 +421,19 @@
     const nc = world.nightK > 0.5;
     if (nc !== nightClass) { nightClass = nc; document.body.classList.toggle('night', nc); document.querySelector('meta[name=theme-color]').content = nc ? '#080b10' : '#ece6d8'; }
   }
+  applyModes();
   requestAnimationFrame(frame);
 
   /* ---------- 开卷：题名二字，化入纸中 ---------- */
   function intro() {
     const y = state.H * 0.42, g = glyphSize() * 0.58;
-    commit('词', state.W / 2 - g, y, 'quick');
-    setTimeout(() => commit('源', state.W / 2 + g, y, 'quick'), 380);
+    const mode = state.trace ? 'quick' : 'plain';
+    commit('词', state.W / 2 - g, y, mode);
+    setTimeout(() => commit('源', state.W / 2 + g, y, mode), 380);
     state.seen.delete('词'); state.seen.delete('源');
   }
   const start = () => {
-    Glyphs.refreshFonts();
+    Glyphs.refreshFonts(); Hand.refresh();
     if (state.W > 200 && state.H > 200) intro();
     else window.addEventListener('resize', function once() { if (state.W > 200 && state.H > 200) { window.removeEventListener('resize', once); intro(); } });
   };

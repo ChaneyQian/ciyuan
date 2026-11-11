@@ -119,6 +119,17 @@
     this.rnd = new Float32Array(N * 4);
     for (let i = 0; i < N * 4; i++) this.rnd[i] = Math.random();
     this.bloomed = false; this.splatted = false; this.lastStage = -1;
+    // 手写而来：墨点从手迹出发，而不是从一滴墨里散开
+    this.hand = null;
+    if (o.hand && o.hand.length && this.n) {
+      let y0 = 1e9, y1 = -1e9;
+      for (const p of o.hand) { if (p[1] < y0) y0 = p[1]; if (p[1] > y1) y1 = p[1]; }
+      const hh = Math.max(1, y1 - y0), hp = o.hand.slice();
+      hp.sort((a, b) => (Math.floor((a[1] - y0) / hh * 9.999) - Math.floor((b[1] - y0) / hh * 9.999)) || (a[0] - b[0]));
+      this.hand = new Float32Array(N * 2);
+      for (let i = 0; i < N; i++) { const p = hp[Math.floor(i * hp.length / N)]; this.hand[i * 2] = (p[0] - this.x) / this.size; this.hand[i * 2 + 1] = (p[1] - this.y) / this.size; }
+      this.tIn = 1.0;
+    }
   }
   Morph.prototype.where = function () {
     let tt = this.t - this.tIn;
@@ -174,7 +185,8 @@
       for (let i = 0; i < N; i++) {
         const u = easeOut(clamp(s.u * 1.5 - R[i * 4] * 0.5, 0, 1));
         const a = R[i * 4 + 1] * TAU, r0 = R[i * 4 + 2] * sz * 0.06;
-        const x = x0 + lerp(Math.cos(a) * r0, A.pts[i * 2] * sz, u), y = y0 + lerp(Math.sin(a) * r0, A.pts[i * 2 + 1] * sz, u);
+        const sx = this.hand ? this.hand[i * 2] * sz : Math.cos(a) * r0, sy = this.hand ? this.hand[i * 2 + 1] * sz : Math.sin(a) * r0;
+        const x = x0 + lerp(sx, A.pts[i * 2] * sz, u), y = y0 + lerp(sy, A.pts[i * 2 + 1] * sz, u);
         const r = pr * (0.7 + R[i * 4 + 3] * 0.9);
         ctx.moveTo(x + r, y); ctx.arc(x, y, r, 0, TAU);
       }

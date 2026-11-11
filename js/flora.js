@@ -231,16 +231,50 @@
       if (u > 0) brush(ctx, s.pts, s.w0, s.w1, u);
     }
   }
-  function blossom(ctx, x, y, s, rot, colorFill, colorCore) {
-    ctx.fillStyle = colorFill;
-    ctx.beginPath();
+  /* 一朵五瓣花，先画成小图存着（昼夜各一份），用时贴上去 */
+  const sprites = {};
+  function blossomSprite(w, kind) {
+    const night = w.nightK > 0.5, key = kind + (night ? 'n' : 'd');
+    if (sprites[key]) return sprites[key];
+    const P = {
+      pink: { base: night ? '255,244,240' : '255,250,246', mid: night ? '255,176,186' : '236,150,160', edge: night ? '255,128,146' : '204,92,110', core: night ? '255,110,110' : '176,44,52' },
+      red:  { base: night ? '255,150,130' : '214,70,56', mid: night ? '240,90,72' : '184,38,32', edge: night ? '214,60,50' : '140,22,22', core: night ? '255,220,120' : '120,16,18' }
+    }[kind];
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const g = c.getContext('2d');
+    g.translate(32, 32);
     for (let i = 0; i < 5; i++) {
-      const a = rot + i * TAU / 5, px = x + Math.cos(a) * s * 0.62, py = y + Math.sin(a) * s * 0.62;
-      ctx.moveTo(px + s * 0.56, py); ctx.arc(px, py, s * 0.56, 0, TAU);
+      g.save(); g.rotate(i * TAU / 5);
+      const gr = g.createRadialGradient(0, -3, 1, 0, -12, 17);
+      gr.addColorStop(0, 'rgba(' + P.base + ',0.92)'); gr.addColorStop(0.55, 'rgba(' + P.mid + ',0.8)'); gr.addColorStop(1, 'rgba(' + P.edge + ',0.72)');
+      g.fillStyle = gr;
+      g.beginPath();                                   // 瓣：圆阔，瓣尖微凹
+      g.moveTo(0, -2); g.bezierCurveTo(8.5, -5, 13.5, -17, 4, -24.5); g.quadraticCurveTo(0, -22, -4, -24.5); g.bezierCurveTo(-13.5, -17, -8.5, -5, 0, -2);
+      g.fill();
+      g.strokeStyle = 'rgba(' + P.edge + ',0.28)'; g.lineWidth = 0.6;      // 瓣脉
+      g.beginPath(); g.moveTo(0, -4); g.lineTo(0, -19); g.stroke();
+      g.restore();
     }
-    ctx.fill();
-    ctx.fillStyle = colorCore;
-    ctx.beginPath(); ctx.arc(x, y, s * 0.24, 0, TAU); ctx.fill();
+    g.fillStyle = 'rgba(' + P.core + ',0.6)';
+    g.beginPath(); g.arc(0, 0, 3.4, 0, TAU); g.fill();
+    g.strokeStyle = night ? 'rgba(255,236,150,0.95)' : 'rgba(190,140,30,0.95)'; g.fillStyle = night ? 'rgba(255,240,170,1)' : 'rgba(222,170,40,1)'; g.lineWidth = 0.7;
+    for (let k = 0; k < 11; k++) {                     // 蕊
+      const a = k * TAU / 11 + 0.2, r = 7 + (k % 3) * 2.2;
+      g.beginPath(); g.moveTo(Math.cos(a) * 2, Math.sin(a) * 2); g.lineTo(Math.cos(a) * r, Math.sin(a) * r); g.stroke();
+      g.beginPath(); g.arc(Math.cos(a) * r, Math.sin(a) * r, 1.05, 0, TAU); g.fill();
+    }
+    return (sprites[key] = c);
+  }
+  function stamp(ctx, img, x, y, r, rot) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.drawImage(img, -r, -r, r * 2, r * 2); ctx.restore();
+  }
+  function bud(ctx, w, x, y, r, rot, color) {           // 花苞：一粒带萼
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+    ctx.fillStyle = w.col(color, 0.95);
+    ctx.beginPath(); ctx.moveTo(0, r * 0.7); ctx.bezierCurveTo(r, r * 0.3, r * 0.7, -r, 0, -r * 1.25); ctx.bezierCurveTo(-r * 0.7, -r, -r, r * 0.3, 0, r * 0.7); ctx.fill();
+    ctx.fillStyle = w.ink(0.75);
+    ctx.beginPath(); ctx.arc(0, r * 0.62, r * 0.42, 0, TAU); ctx.fill();
+    ctx.restore();
   }
 
   /* ================= 梅 ================= */
@@ -252,6 +286,7 @@
       const ang = Math.atan2(e.y - sy, e.x - sx);
       const len = Math.hypot(e.x - sx, e.y - sy) * 0.62;
       e.tree = growBranches(r, sx, sy, ang, len, 11, 3, { kink: 0.75, lift: ang - (fromRight ? -0.25 : 0.25), pull: 0.6, bloom: 0.5, buds: 0.4, flowerDepth: 2 });
+      for (const t of e.tree.tips) { t.rot = r() * TAU; t.r = 7.5 + r() * 3.5; }
       e.spots = e.tree.tips.filter((t) => !t.bud);
       e.shed = 2;
     },
@@ -260,25 +295,32 @@
       if (e.shed < 0 && e.age > 6 && e.spots.length) { e.shed = 2.5 + Math.random() * 4; const t = e.spots[(Math.random() * e.spots.length) | 0]; w.drift(t.x, t.y, 'petal', 'red'); }
     },
     draw(e, ctx, w) {
-      const g = clamp(e.age / 3.2, 0, 1);
+      const g = clamp(e.age / 3.2, 0, 1), img = blossomSprite(w, 'red');
       drawBranches(e, ctx, w, g);
       for (const t of e.tree.tips) {
         const b = easeOut((e.age / 3.2 * e.tree.T - t.t) / 0.5);
         if (b <= 0) continue;
-        const s = 6.2 * t.s * b;
-        if (t.bud) { ctx.fillStyle = w.col('red', 0.9); ctx.beginPath(); ctx.arc(t.x, t.y, s * 0.42, 0, TAU); ctx.fill(); }
-        else blossom(ctx, t.x, t.y, s, t.s * 9, w.col('red', 0.84), w.col('yellow', 0.9));
+        if (t.bud) bud(ctx, w, t.x, t.y, t.r * 0.42 * b, t.rot, 'red');
+        else stamp(ctx, img, t.x, t.y, t.r * b, t.rot + Math.sin(w.t * 0.8 + t.rot) * 0.05);
       }
     }
   };
 
-  /* ================= 花（杏花一树） ================= */
+  /* ================= 花（杏花一树：五瓣、有蕊、带苞与新叶） ================= */
   Kinds.flower = {
     z: 61, max: 4, zone: 'ground',
     create(e, w) {
-      const r = e.rng, h = clamp(w.H * 0.3, 170, 330);
-      e.tree = growBranches(r, e.x, e.y + h * 0.62, -Math.PI / 2 + (r() - 0.5) * 0.3, h * 0.42, 12, 4, { kink: 0.5, lift: -Math.PI / 2, pull: 0.5, bloom: 0.7, buds: 0.15, flowerDepth: 2 });
-      e.spots = e.tree.tips;
+      const r = e.rng, h = clamp(w.H * 0.34, 190, 360);
+      e.tree = growBranches(r, e.x, e.y + h * 0.6, -Math.PI / 2 + (r() - 0.5) * 0.3, h * 0.42, 13, 4, { kink: 0.55, lift: -Math.PI / 2, pull: 0.45, bloom: 0.62, buds: 0.22, flowerDepth: 2 });
+      if (e.tree.tips.length > 54) e.tree.tips.length = 54;
+      for (const t of e.tree.tips) {
+        t.rot = r() * TAU; t.r = 8.5 + r() * 4.5; t.leaf = r() < 0.45; t.la = r() * TAU;
+        t.more = [];                                    // 花是一簇一簇开的
+        const n = t.bud ? 0 : (r() * 2.4) | 0;
+        for (let k = 0; k < n; k++) { const a = r() * TAU, d = 9 + r() * 9; t.more.push({ dx: Math.cos(a) * d, dy: Math.sin(a) * d, r: 6 + r() * 4, rot: r() * TAU, bud: r() < 0.3 }); }
+      }
+      e.spots = e.tree.tips.filter((t) => !t.bud);
+      if (!e.spots.length) e.spots = e.tree.tips;
       e.shed = 1;
     },
     update(e, dt, w) {
@@ -291,15 +333,35 @@
     },
     draw(e, ctx, w) {
       const g = clamp(e.age / 3.6, 0, 1), se = w.season;
+      // 先一层淡淡的色晕，像没干的水色
+      if (se !== '冬') {
+        const wash = se === '夏' ? 'leaf' : se === '秋' ? 'orange' : 'pink';
+        for (const t of e.tree.tips) {
+          const b = easeOut((e.age / 3.6 * e.tree.T - t.t) / 0.6);
+          if (b > 0 && !t.bud) softDot(ctx, t.x, t.y, 22 * b, w.col(wash, 0.16), w.col(wash, 0));
+        }
+      }
       drawBranches(e, ctx, w, g);
       if (se === '冬') return;
-      const col = se === '夏' ? 'leaf' : se === '秋' ? 'orange' : 'pink';
+      const leafy = se === '夏' || se === '秋', img = leafy ? null : blossomSprite(w, 'pink');
+      const sw = Math.sin(w.t * 0.9) * 0.05 + w.wind * 0.12;
       for (const t of e.tree.tips) {
         const b = easeOut((e.age / 3.6 * e.tree.T - t.t) / 0.6);
         if (b <= 0) continue;
-        softDot(ctx, t.x, t.y, 15 * t.s * b, w.col(col, 0.34), w.col(col, 0));
-        if (col === 'pink') blossom(ctx, t.x, t.y, 4.6 * t.s * b, t.s * 7, w.col('pink', 0.9), w.col('red', 0.75));
-        else { ctx.fillStyle = w.col(col, 0.8); ctx.beginPath(); leafPath(ctx, t.x, t.y, t.s * 7, 11 * b, 4, 0.1); ctx.fill(); }
+        if (leafy || t.leaf) {                           // 叶
+          ctx.fillStyle = w.col(se === '秋' ? 'orange' : 'leaf', leafy ? 0.85 : 0.75);
+          ctx.beginPath();
+          const n = leafy ? 3 : 2;
+          for (let k = 0; k < n; k++) leafPath(ctx, t.x, t.y, t.la + k * (TAU / n) + sw, (leafy ? 15 : 10) * b, leafy ? 5 : 3.4, 0.12);
+          ctx.fill();
+        }
+        if (leafy) continue;
+        if (t.bud) bud(ctx, w, t.x, t.y, t.r * 0.4 * b, t.rot, 'pink');
+        else stamp(ctx, img, t.x, t.y, t.r * b, t.rot + sw);
+        for (const m of t.more) {
+          if (m.bud) bud(ctx, w, t.x + m.dx, t.y + m.dy, m.r * 0.42 * b, m.rot, 'pink');
+          else stamp(ctx, img, t.x + m.dx, t.y + m.dy, m.r * b, m.rot + sw);
+        }
       }
     }
   };

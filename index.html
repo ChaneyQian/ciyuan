@@ -23,7 +23,9 @@
 
   <nav class="tools" aria-label="工具">
     <button id="btn-auto" type="button" aria-pressed="false" title="自在：让《声律启蒙》自己写一阕">自在</button>
-    <button id="btn-trace" type="button" aria-pressed="true" title="溯源：字形从楷书倒退回甲骨文">溯源</button>
+    <button id="btn-trace" type="button" aria-pressed="false" title="溯源：字形从楷书倒退回甲骨文（默认关）">溯源</button>
+    <button id="btn-hand" type="button" aria-pressed="false" title="手写：在纸上写一个字，停笔后由程序判定">手写</button>
+    <button id="btn-pinyin" type="button" aria-pressed="false" title="拼音：不用系统输入法，直接敲拼音出字">拼音</button>
     <button id="btn-sound" type="button" aria-pressed="false" title="有声：古琴、古筝、琵琶、笛箫、编钟">有声</button>
     <button id="btn-shot" type="button" title="留影：存一张画">留影</button>
   </nav>
@@ -33,9 +35,10 @@
 
   <footer class="dock">
     <div class="chars" id="chars" role="toolbar" aria-label="可以活过来的字"></div>
-    <p class="hint"><span class="kbd-only">键盘直接打字，字会溯源而活<i>·</i></span>点字落笔<i>·</i>拖动落墨<i>·</i><span class="kbd-only">按住 Shift 泼水<i>·</i></span><b data-ink="0" class="on">1 墨</b> <b data-ink="1">2 朱</b> <b data-ink="2">3 青</b></p>
+    <p class="hint"><span id="hint-mode"></span><b data-ink="0" class="on">1 墨</b> <b data-ink="1">2 朱</b> <b data-ink="2">3 青</b></p>
   </footer>
 
+  <div id="py" aria-live="polite"></div>
   <input id="ime" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="在此输入汉字" tabindex="-1">
   <noscript><p class="noscript">词源需要 JavaScript 与 WebGL。</p></noscript>
 
@@ -48,6 +51,7 @@
   <script src="js/things.js"></script>
   <script src="js/lexicon.js"></script>
   <script src="js/glyph.js"></script>
+  <script src="js/hand.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/main.js"></script>
 </body>

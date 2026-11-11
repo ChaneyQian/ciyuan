@@ -61,6 +61,22 @@
     '昼': { kind: 'day', tone: '仄', group: '时', note: '从日从画省；日之出入，与夜为界', alias: '晓晨' },
     '空': { kind: 'clear', tone: '平', group: '时', note: '形声字，从穴工声；万象归于空' }
   };
+  // 拼音（内置拼音输入用）与笔画数（手写判定用）
+  const PY = {
+    '日': 'ri', '月': 'yue', '星': 'xing', '云': 'yun', '雨': 'yu', '雪': 'xue', '风': 'feng', '雷': 'lei', '虹': 'hong', '霞': 'xia', '烟': 'yan',
+    '山': 'shan', '水': 'shui', '竹': 'zhu', '松': 'song', '柳': 'liu', '梅': 'mei', '花': 'hua', '荷': 'he', '菊': 'ju', '草': 'cao',
+    '鸟': 'niao', '燕': 'yan', '雁': 'yan', '莺': 'ying', '鹤': 'he', '蝶': 'die', '虫': 'chong', '鱼': 'yu', '龙': 'long',
+    '舟': 'zhou', '楼': 'lou', '钟': 'zhong', '鼓': 'gu', '剑': 'jian', '火': 'huo', '灯': 'deng',
+    '春': 'chun', '夏': 'xia', '秋': 'qiu', '冬': 'dong', '夜': 'ye', '昼': 'zhou', '空': 'kong'
+  };
+  const STROKES = {
+    '日': 4, '月': 4, '星': 9, '云': 4, '雨': 8, '雪': 11, '风': 4, '雷': 13, '虹': 9, '霞': 17, '烟': 10,
+    '山': 3, '水': 4, '竹': 6, '松': 8, '柳': 9, '梅': 11, '花': 7, '荷': 10, '菊': 11, '草': 9,
+    '鸟': 5, '燕': 16, '雁': 12, '莺': 10, '鹤': 15, '蝶': 15, '虫': 6, '鱼': 8, '龙': 5,
+    '舟': 6, '楼': 13, '钟': 9, '鼓': 13, '剑': 9, '火': 4, '灯': 6,
+    '春': 9, '夏': 10, '秋': 9, '冬': 5, '夜': 8, '昼': 9, '空': 8
+  };
+  for (const ch in C) { C[ch].py = PY[ch]; C[ch].strokes = STROKES[ch]; }
   MS.CHARS = C;
   MS.CHAR_LIST = Object.keys(C);
   MS.GROUPS = [['天', '天象'], ['地', '山水'], ['木', '草木'], ['羽', '禽鸟'], ['鳞', '虫鱼'], ['器', '器物'], ['时', '四时']];
@@ -102,6 +118,13 @@
     // 原字相对的排前面，其次取短的
     for (const k in Lex.pairs) Lex.pairs[k].sort((x, y) => (y.exact - x.exact) || (x.text.length - y.text.length));
   })();
+
+  /* 拼音前缀 → 候选字（按字表次序）。整拼且独一无二时 exact 为真，可以直接落字 */
+  Lex.pinyin = function (buf) {
+    const list = MS.CHAR_LIST.filter((ch) => C[ch].py.indexOf(buf) === 0);
+    const full = list.filter((ch) => C[ch].py === buf);
+    return { list: full.concat(list.filter((ch) => C[ch].py !== buf)), exact: full.length === 1 && list.length === 1 };
+  };
 
   /* 与某字相对的字（去重） */
   Lex.partners = function (ch) {

@@ -128,6 +128,60 @@ body.night .chars button { background: rgba(8, 11, 16, .34); }
 .hint b[data-ink="2"].on { color: #34685c; }
 body.night .hint b[data-ink="2"].on { color: #7cd4c4; }
 
+/* —— 手写：判定结果浮在手迹下方 —— */
+body.hand #stage { cursor: cell; }
+#hw {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, 6px);
+  display: flex; align-items: center; gap: 9px;
+  opacity: 0; pointer-events: none; transition: opacity .3s, transform .3s var(--ease);
+  white-space: nowrap;
+}
+#hw.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+#hw .say { font-size: 12px; letter-spacing: .3em; color: rgba(var(--ink), .55); }
+#hw.miss .say { color: var(--cinnabar); }
+#hw button {
+  font: inherit; cursor: pointer; padding: 0; position: relative;
+  width: 44px; height: 44px; border-radius: 50%;
+  font-family: var(--brush); font-size: 25px; line-height: 42px; text-align: center;
+  color: rgba(var(--ink), .86); background: rgba(236, 230, 216, .72);
+  border: 1px solid rgba(var(--ink), .32);
+  transition: transform .2s var(--ease), border-color .2s;
+}
+body.night #hw button { background: rgba(8, 11, 16, .7); }
+#hw button:hover { transform: scale(1.1); border-color: rgba(var(--ink), .8); }
+#hw button.top { color: var(--cinnabar); border-color: var(--cinnabar); }
+/* 第一名下面一条倒计时的墨线：走完即落字 */
+#hw button.top::after {
+  content: ""; position: absolute; left: 6px; right: 6px; bottom: -8px; height: 2px; border-radius: 2px;
+  background: var(--cinnabar); transform-origin: left; animation: countdown var(--t, 2s) linear forwards;
+}
+#hw button.no {
+  width: auto; height: auto; border-radius: 99px; padding: 5px 11px 6px; margin-left: 4px;
+  font-family: var(--text); font-size: 12px; line-height: 1.2; letter-spacing: .2em; text-indent: .2em;
+  color: rgba(var(--ink), .6);
+}
+#hw.hold button.top::after { display: none; }    /* 拿不准时不倒计时，等人来点 */
+@keyframes countdown { to { transform: scaleX(0); } }
+
+/* —— 拼音：笔尖旁的一条小笺 —— */
+#py {
+  position: fixed; left: 0; top: 0; display: none; align-items: center; gap: 4px;
+  padding: 5px 8px 6px 11px; border-radius: 4px;
+  background: rgba(247, 242, 230, .96); border: 1px solid rgba(30, 28, 26, .22);
+  box-shadow: 0 6px 20px rgba(30, 28, 26, .14);
+  color: #1e1c1a; white-space: nowrap; z-index: 5;
+}
+#py.show { display: flex; }
+#py .buf { font-family: Georgia, "Times New Roman", serif; font-style: italic; font-size: 16px; letter-spacing: .06em; margin-right: 8px; border-bottom: 1px solid var(--cinnabar); padding-bottom: 1px; }
+#py .none { font-size: 12px; letter-spacing: .2em; color: rgba(30, 28, 26, .5); }
+#py button {
+  font: inherit; cursor: pointer; background: none; border: 0; padding: 2px 7px 3px; border-radius: 3px;
+  font-family: var(--brush); font-size: 22px; line-height: 1.2; color: #1e1c1a;
+}
+#py button:first-of-type { background: rgba(176, 36, 30, .1); color: var(--cinnabar-deep); }
+#py button:hover { background: rgba(30, 28, 26, .1); }
+#py button i { font-family: var(--text); font-style: normal; font-size: 10.5px; margin-right: 3px; color: rgba(30, 28, 26, .45); vertical-align: .3em; }
+
 /* 输入法的落点：看不见，但跟着光标走，候选框就出现在笔尖 */
 #ime { position: fixed; left: 50%; top: 50%; width: 2px; height: 26px; padding: 0; border: 0; outline: 0; opacity: 0; font-size: 16px; background: transparent; color: transparent; caret-color: transparent; pointer-events: none; }
 .noscript { position: fixed; inset: 0; display: grid; place-items: center; }
@@ -140,7 +194,7 @@ body.night .hint b[data-ink="2"].on { color: #7cd4c4; }
 @media (max-width: 760px) {
   .brand { left: 14px; top: 14px; gap: 9px; }
   .seal { width: 38px; font-size: 22px; }
-  .tools { right: 12px; top: 14px; gap: 6px; }
+  .tools { right: 12px; top: 14px; gap: 6px; flex-wrap: wrap; justify-content: flex-end; max-width: calc(100vw - 100px); }
   .tools button { padding: 6px 10px 7px; font-size: 12.5px; letter-spacing: .16em; text-indent: .16em; }
   .verse { right: 14px; top: 46%; }
   .verse .col { font-size: 19px; }
@@ -151,7 +205,6 @@ body.night .hint b[data-ink="2"].on { color: #7cd4c4; }
   .chars button::after { display: none; }
   .hint { font-size: 10.5px; letter-spacing: .14em; padding: 0 10px; }
 }
-@media (hover: none) { .kbd-only { display: none; } }
 @media (prefers-reduced-motion: reduce) {
   .brand, .tools, .dock { animation: none; }
   .chars button.dui { animation: none; }
