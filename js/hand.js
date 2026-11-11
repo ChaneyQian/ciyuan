@@ -103,13 +103,14 @@
   let templates = null, builtAt = 0;
   function build() {
     templates = [];
-    for (const ch of MS.CHAR_LIST) {
+    for (const ch of MS.CHAR_LIST) {             // 卷中专用的字也留着模板：首页写了它，要认得出「不是别的字」
       const fs = [];
       for (const st of STACKS) { const f = glyphFeature(ch, st); if (f) fs.push(f); }
       templates.push({ ch, fs, strokes: MS.CHARS[ch].strokes || 8 });
     }
     builtAt = performance.now();
   }
+  const extra = {};
   function cos(a, b) { let s = 0; for (let i = 0; i < DIM; i++) s += a[i] * b[i]; return s; }
 
   /* 特征 + 笔数 → 排好名的候选 [{ch, score, raw}] */
@@ -191,7 +192,26 @@
     const b = bbox();
     H.box = b;
     if (b.len < 46 || Math.max(b.w, b.h) < 26) { reject(); return; }            // 只是一点：当作落墨
-    const list = rank(strokesFeature(H.strokes.map((s) => s.p)), H.strokes.length);
+    let list = rank(strokesFeature(H.strokes.map((s) => s.p)), H.strokes.length);
+    if (H.among) {
+      // 手卷里出了题：只在那几个候选里认。字库之外的字临时补上模板
+      const f = strokesFeature(H.strokes.map((s) => s.p));
+      list = H.among.map((ch) => {
+        let t = extra[ch];
+        if (!t) { t = extra[ch] = []; for (const st of STACKS) { const g = glyphFeature(ch, st); if (g) t.push(g); } }
+        let best = 0;
+        for (const tf of t) { const c = cos(f, tf); if (c > best) best = c; }
+        return { ch, score: best, raw: best };
+      }).sort((a, b) => b.score - a.score);
+      H.cands = list.slice(0, 4);
+      if (!list.length || list[0].score < 0.5) { miss(); return; }
+      H.auto = true; H.timer = 0.55; show('sure'); H.phase = 'judged';
+      return;
+    }
+    // 首页不认卷中专用的字（人物、车马）：最像它就当认不出，也不拿它去凑候选
+    const off = (c) => MS.CHARS[c.ch].only === 'scroll';
+    if (off(list[0])) { H.cands = []; miss(); return; }
+    list = list.filter((c) => !off(c));
     H.cands = list.slice(0, 4);
     const top = list[0];
     if (top.score < ACCEPT) { miss(); return; }
@@ -281,6 +301,7 @@
     ctx.restore();
   };
   H.busy = function () { return H.phase !== 'idle'; };
+  H.cancel = function () { reset(); };
 
   // 供测试与调试
   H.feature = feature; H.glyphFeature = glyphFeature; H.strokesFeature = strokesFeature; H.rank = rank; H.build = build;

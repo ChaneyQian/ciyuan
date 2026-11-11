@@ -20,10 +20,10 @@
     '雷': { kind: 'thunder', tone: '平', group: '天', note: '象闪电回曲，间有雷声滚滚', alias: '霆' },
     '虹': { kind: 'rainbow', tone: '平', group: '天', note: '甲骨文象双首之龙，俯饮于河', alias: '霓' },
     '霞': { kind: 'glow', tone: '平', group: '天', note: '形声字，从雨叚声' },
-    '烟': { kind: 'mist', tone: '平', group: '天', note: '形声字，从火垔声', alias: '雾岚霭' },
+    '烟': { kind: 'mist', tone: '平', group: '天', note: '形声字，从火垔声', alias: '岚霭' },
     // —— 山水
     '山': { kind: 'mountain', tone: '平', group: '地', note: '象群峰并立之形', alias: '峰岭岳' },
-    '水': { kind: 'water', tone: '仄', group: '地', note: '象流水之形，中为水脉，旁为水点', alias: '江河溪波泉' },
+    '水': { kind: 'water', tone: '仄', group: '地', note: '象流水之形，中为水脉，旁为水点', alias: '江河溪泉' },
     // —— 草木
     '竹': { kind: 'bamboo', tone: '仄', group: '木', note: '象竹叶下垂之形', alias: '篁' },
     '松': { kind: 'pine', tone: '平', group: '木', note: '形声字，从木公声' },
@@ -36,7 +36,7 @@
     // —— 禽鸟
     '鸟': { kind: 'birds', tone: '仄', group: '羽', note: '象鸟侧立之形，喙、羽、足俱全', alias: '雀禽' },
     '燕': { kind: 'swallow', tone: '仄', group: '羽', note: '象燕子张口、展翅、剪尾之形' },
-    '雁': { kind: 'geese', tone: '仄', group: '羽', note: '从隹从人，厂声；雁行有序如人', alias: '鸿' },
+    '雁': { kind: 'geese', tone: '仄', group: '羽', note: '从隹从人，厂声；雁行有序如人' },
     '莺': { kind: 'oriole', tone: '平', group: '羽', note: '形声字，从鸟，荣省声', alias: '鹂' },
     '鹤': { kind: 'crane', tone: '仄', group: '羽', note: '形声字，从鸟隺声' },
     // —— 虫鱼
@@ -59,7 +59,31 @@
     '冬': { kind: 'season', tone: '平', group: '时', note: '甲骨文象丝绳两端打结，表终了' },
     '夜': { kind: 'night', tone: '仄', group: '时', note: '从夕，亦省声；人腋下见月', alias: '宵' },
     '昼': { kind: 'day', tone: '仄', group: '时', note: '从日从画省；日之出入，与夜为界', alias: '晓晨' },
-    '空': { kind: 'clear', tone: '平', group: '时', note: '形声字，从穴工声；万象归于空' }
+    '空': { kind: 'clear', tone: '平', group: '时', note: '形声字，从穴工声；万象归于空' },
+    // —— 以下不出自《声律启蒙》的选字，是为演别的古文添的（先是《洛神赋》）
+    //    标了 only:'scroll' 的是戏里的人物与车马仪仗：只在「人间词话」的卷中出现，首页不列、不认、不化
+    '霜': { kind: 'frost', tone: '平', group: '天', note: '形声字，从雨相声' },
+    '雾': { kind: 'mist', tone: '仄', group: '天', note: '形声字，从雨务声' },
+    '光': { kind: 'light', tone: '平', group: '天', note: '甲骨文象人头上有火，光明之意' },
+    '曙': { kind: 'sun', tone: '仄', group: '天', note: '形声字，从日署声；天刚亮' },
+    '川': { kind: 'water', tone: '平', group: '地', note: '象两岸之间有水流过' },
+    '波': { kind: 'water', tone: '平', group: '地', note: '形声字，从水皮声' },
+    '渊': { kind: 'pool', tone: '平', group: '地', note: '象回旋的深水，外有岸' },
+    '岩': { kind: 'rock', tone: '平', group: '地', note: '山上之石；古作「巖」，从山严声' },
+    '林': { kind: 'grove', tone: '平', group: '木', note: '二木相并，树木丛生' },
+    '兰': { kind: 'orchid', tone: '平', group: '木', note: '形声字，繁体作「蘭」，从艸阑声' },
+    '芝': { kind: 'zhi', tone: '平', group: '木', note: '形声字，从艸之声；瑞草' },
+    '蕖': { kind: 'lotus', tone: '平', group: '木', note: '形声字，从艸渠声；芙蕖即荷花' },
+    '鸿': { kind: 'geese', tone: '平', group: '羽', note: '形声字，从鸟江声；大雁' },
+    '凫': { kind: 'duck', tone: '平', group: '羽', note: '从鸟从几；野鸭' },
+    '羽': { kind: 'feather', tone: '仄', group: '羽', note: '象鸟翼上两排长毛之形' },
+    '珠': { kind: 'pearl', tone: '平', group: '器', note: '形声字，从玉朱声' },
+    '旗': { only: 'scroll', kind: 'banner', tone: '平', group: '器', note: '形声字，从㫃其声' },
+    '车': { only: 'scroll', kind: 'cart', tone: '平', group: '器', note: '象车之形，有轮、舆、辕' },
+    '神': { only: 'scroll', kind: 'goddess', tone: '平', group: '人', note: '从示申声；「申」本象闪电' },
+    '人': { only: 'scroll', kind: 'person', tone: '平', group: '人', note: '象人侧立之形' },
+    '马': { only: 'scroll', kind: 'horse', tone: '仄', group: '人', note: '象马之形，有鬃、尾、四足' },
+    '泪': { kind: 'tears', tone: '仄', group: '人', note: '目中之水；古作「淚」，从水戾声' }
   };
   // 拼音（内置拼音输入用）与笔画数（手写判定用）
   const PY = {
@@ -67,23 +91,30 @@
     '山': 'shan', '水': 'shui', '竹': 'zhu', '松': 'song', '柳': 'liu', '梅': 'mei', '花': 'hua', '荷': 'he', '菊': 'ju', '草': 'cao',
     '鸟': 'niao', '燕': 'yan', '雁': 'yan', '莺': 'ying', '鹤': 'he', '蝶': 'die', '虫': 'chong', '鱼': 'yu', '龙': 'long',
     '舟': 'zhou', '楼': 'lou', '钟': 'zhong', '鼓': 'gu', '剑': 'jian', '火': 'huo', '灯': 'deng',
-    '春': 'chun', '夏': 'xia', '秋': 'qiu', '冬': 'dong', '夜': 'ye', '昼': 'zhou', '空': 'kong'
+    '春': 'chun', '夏': 'xia', '秋': 'qiu', '冬': 'dong', '夜': 'ye', '昼': 'zhou', '空': 'kong',
+    '霜': 'shuang', '雾': 'wu', '光': 'guang', '曙': 'shu', '川': 'chuan', '波': 'bo', '渊': 'yuan', '岩': 'yan',
+    '林': 'lin', '兰': 'lan', '芝': 'zhi', '蕖': 'qu', '鸿': 'hong', '凫': 'fu', '羽': 'yu',
+    '珠': 'zhu', '旗': 'qi', '车': 'che', '神': 'shen', '人': 'ren', '马': 'ma', '泪': 'lei'
   };
   const STROKES = {
     '日': 4, '月': 4, '星': 9, '云': 4, '雨': 8, '雪': 11, '风': 4, '雷': 13, '虹': 9, '霞': 17, '烟': 10,
     '山': 3, '水': 4, '竹': 6, '松': 8, '柳': 9, '梅': 11, '花': 7, '荷': 10, '菊': 11, '草': 9,
     '鸟': 5, '燕': 16, '雁': 12, '莺': 10, '鹤': 15, '蝶': 15, '虫': 6, '鱼': 8, '龙': 5,
     '舟': 6, '楼': 13, '钟': 9, '鼓': 13, '剑': 9, '火': 4, '灯': 6,
-    '春': 9, '夏': 10, '秋': 9, '冬': 5, '夜': 8, '昼': 9, '空': 8
+    '春': 9, '夏': 10, '秋': 9, '冬': 5, '夜': 8, '昼': 9, '空': 8,
+    '霜': 17, '雾': 13, '光': 6, '曙': 17, '川': 3, '波': 8, '渊': 11, '岩': 8,
+    '林': 8, '兰': 5, '芝': 6, '蕖': 14, '鸿': 11, '凫': 6, '羽': 6,
+    '珠': 10, '旗': 14, '车': 4, '神': 9, '人': 2, '马': 3, '泪': 8
   };
   for (const ch in C) { C[ch].py = PY[ch]; C[ch].strokes = STROKES[ch]; }
   MS.CHARS = C;
   MS.CHAR_LIST = Object.keys(C);
-  MS.GROUPS = [['天', '天象'], ['地', '山水'], ['木', '草木'], ['羽', '禽鸟'], ['鳞', '虫鱼'], ['器', '器物'], ['时', '四时']];
+  MS.HOME_LIST = MS.CHAR_LIST.filter((ch) => C[ch].only !== 'scroll');   // 首页可写的字
+  MS.GROUPS = [['天', '天象'], ['地', '山水'], ['木', '草木'], ['羽', '禽鸟'], ['鳞', '虫鱼'], ['器', '器物'], ['人', '人事'], ['时', '四时']];
 
   /* 字 -> 世界中的那个字（把别名折回去） */
   const canon = {};
-  for (const ch of MS.CHAR_LIST) { canon[ch] = ch; for (const a of (C[ch].alias || '')) if (!canon[a]) canon[a] = ch; }
+  for (const ch of MS.HOME_LIST) { canon[ch] = ch; for (const a of (C[ch].alias || '')) if (!canon[a]) canon[a] = ch; }
 
   const Lex = (MS.Lex = { pairs: {}, lines: [], canon });
 
@@ -121,7 +152,7 @@
 
   /* 拼音前缀 → 候选字（按字表次序）。整拼且独一无二时 exact 为真，可以直接落字 */
   Lex.pinyin = function (buf) {
-    const list = MS.CHAR_LIST.filter((ch) => C[ch].py.indexOf(buf) === 0);
+    const list = MS.HOME_LIST.filter((ch) => C[ch].py.indexOf(buf) === 0);
     const full = list.filter((ch) => C[ch].py === buf);
     return { list: full.concat(list.filter((ch) => C[ch].py !== buf)), exact: full.length === 1 && list.length === 1 };
   };

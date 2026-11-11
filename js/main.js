@@ -11,7 +11,7 @@
   const ctx = stage.getContext('2d');
   const fluid = new MS.Fluid(inkCanvas);
   const world = new MS.World(fluid);
-  const Audio = MS.Audio, Lex = MS.Lex, Glyphs = MS.Glyphs, Hand = MS.Hand;
+  const Audio = MS.Audio, Lex = MS.Lex, Glyphs = MS.Glyphs, Hand = MS.Hand, Scroll = MS.Scroll;
   MS.world = world; MS.fluid = fluid;
 
   const state = {
@@ -118,7 +118,7 @@
   (function buildDock() {
     for (const [g, label] of MS.GROUPS) {
       const grp = document.createElement('div'); grp.className = 'grp'; grp.setAttribute('aria-label', label);
-      for (const ch of MS.CHAR_LIST) {
+      for (const ch of MS.HOME_LIST) {
         const def = MS.CHARS[ch];
         if (def.group !== g) continue;
         const b = document.createElement('button');
@@ -173,7 +173,69 @@
     for (const t of parts) { box.append(t); const dot = document.createElement('i'); dot.textContent = '·'; box.appendChild(dot); }
     savePrefs();
   }
-  $('btn-auto').addEventListener('click', () => { wake(); setAuto(!state.auto); });
+  $('btn-auto').addEventListener('click', () => {
+    wake();
+    if (Scroll.active) { Scroll.auto = !Scroll.auto; press($('btn-auto'), Scroll.auto); } else setAuto(!state.auto);
+  });
+
+  /* ---------- 人间词话：手卷 ---------- */
+  const volsEl = $('vols');
+  for (const id in MS.Scrolls) {
+    const v = MS.Scrolls[id], b = document.createElement('button');
+    b.type = 'button'; b.setAttribute('role', 'menuitem'); b.textContent = v.label + (v.pending ? '（待续）' : '');
+    b.disabled = !!v.pending;
+    b.addEventListener('click', () => { volsEl.classList.remove('show'); openScroll(id); });
+    volsEl.appendChild(b);
+  }
+  $('btn-scroll').addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (Scroll.active) Scroll.close(); else volsEl.classList.toggle('show');
+  });
+  window.addEventListener('click', () => volsEl.classList.remove('show'));
+  function openScroll(id) {
+    wake(); setAuto(false);
+    if (!Scroll.open(id, fluid, state.W, state.H)) return;
+    Hand.setEnabled(true); pyClear(); Glyphs.list.length = 0;
+    $('btn-scroll').textContent = '收卷'; press($('btn-scroll'), true); press($('btn-auto'), false);
+    const tag = document.createElement('span'); tag.textContent = '人间词话 · ' + MS.Scrolls[id].label.replace(' · ', ' ');
+    $('sbar').prepend(tag);
+    Audio.play('season', { ch: '' }); Audio.bloom('mountain', 0);
+  }
+  Scroll.onClose = () => {
+    if (hintOn) { hintOn = false; hintEl.classList.remove('show'); }
+    $('btn-scroll').textContent = '词话'; press($('btn-scroll'), false); press($('btn-auto'), state.auto);
+    Hand.among = null; fluid.night = world.nightK; applyModes();
+  };
+  Scroll.onSound = (kind, d) => {
+    if (kind === 'event') { if (d.x != null) d.pan = 0; Audio.play(d.type, d); }
+    else if (kind === 'bloom') Audio.bloom(d.kind, 0);
+    else if (kind === 'touch') { Audio.play('ink', { i: 6, pan: 0 }); Audio.bloom('lotus', 0); }
+    else Audio.play(kind, d);
+  };
+  Scroll.onSection = () => Audio.play('clear');
+  /* 出了一道题：手写只在这几个候选里认 */
+  Scroll.onBeat = (b, options) => { Hand.among = options; };
+  Scroll.onSolve = () => { Hand.among = null; Hand.cancel(); press($('btn-auto'), Scroll.auto); };
+  const wrongEl = $('swrong');
+  let wrongT = 0;
+  Scroll.onWrong = (ch, o, how) => {
+    wrongEl.textContent = how === 'hand' ? '认作「' + ch + '」，这里缺的不是它' : '不是「' + ch + '」，再想想';
+    wrongEl.classList.add('show'); clearTimeout(wrongT); wrongT = setTimeout(() => wrongEl.classList.remove('show'), 2200);
+    Audio.play('stage', { idx: 5 });
+  };
+
+  /* 第一次开卷时蒙一层提示：怎么拉动画卷。只出现一次（记在本机），一动就收 */
+  const hintEl = $('shint'), HINT = 'ciyuan.scrollHint';
+  let hintSeen = false, hintOn = false;
+  try { hintSeen = localStorage.getItem(HINT) === '1'; } catch (err) { /* 存不了就每次都提示一下，无妨 */ }
+  function showHint() { if (hintSeen || hintOn) return; hintOn = true; hintEl.classList.add('show'); }
+  function hideHint() {
+    if (!hintOn) return;
+    hintOn = false; hintSeen = true; hintEl.classList.remove('show');
+    try { localStorage.setItem(HINT, '1'); } catch (err) { /* 同上 */ }
+  }
+  hintEl.addEventListener('pointerdown', (e) => { e.stopPropagation(); hideHint(); });
+  window.addEventListener('wheel', (e) => { if (Scroll.active) { e.preventDefault(); hideHint(); Scroll.wheel((Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY) * (e.deltaMode ? 30 : 1)); } }, { passive: false });
   $('btn-shot').addEventListener('click', snapshot);
   document.querySelectorAll('.hint b').forEach((b) => b.addEventListener('click', () => setInk(+b.dataset.ink)));
   function setInk(i) {
@@ -252,8 +314,12 @@
     try { stage.setPointerCapture(e.pointerId); } catch (err) { /* 无妨 */ }
     moveIme(e.clientX, e.clientY);
     if (e.pointerType === 'mouse') { e.preventDefault(); ime.focus({ preventScroll: true }); }
-    if (e.shiftKey) splash(e.clientX, e.clientY);
-    else if (state.hand) Hand.down(e.clientX, e.clientY);
+    const sm = Scroll.active ? Scroll.pointerDown(e.clientX, e.clientY, e.pointerType === 'touch') : '';
+    state.noInk = sm === 'pan' || sm === 'write';
+    state.writing = sm === 'write' || (state.hand && !Scroll.active);
+    if (sm === 'pan') { /* 拖的是卷子，不落墨 */ }
+    else if (e.shiftKey && !Scroll.active) splash(e.clientX, e.clientY);
+    else if (state.writing) Hand.down(e.clientX, e.clientY);
     else {
       fluid.splat(e.clientX, e.clientY, 0, 0, PIG[state.ink], 15);
       Audio.play('ink', { i: Math.round((1 - e.clientY / state.H) * 9), pan: (e.clientX / state.W * 2 - 1) * 0.7 });
@@ -272,9 +338,12 @@
     const P = world.pointer;
     P.x = x; P.y = y; P.vx = vx; P.vy = vy; P.moved = 0;
     if (!ime.matches(':focus') || !composing) moveIme(x, y);
-    if (state.down) {
+    if (Scroll.active) Scroll.pointerMove(x, y);
+    if (state.down && state.writing) Hand.move(x, y);
+    else if (state.down && state.noInk) { /* 拖卷 */ }
+    else if (state.down) {
       if (e.shiftKey) splash(x, y);
-      else if (state.hand) Hand.move(x, y);
+      else if (state.hand && !Scroll.active) Hand.move(x, y);
       else {
         const k = clamp(sp / 900, 0.25, 1), p = PIG[state.ink];
         const steps = Math.min(6, Math.ceil(Math.hypot(x - lastX, y - lastY) / 14)) || 1;
@@ -288,9 +357,17 @@
     }
     lastX = x; lastY = y; lastT = t;
   });
-  const up = () => { state.down = false; Hand.up(); };
+  const up = () => {
+    const traced = Scroll.active && Scroll.pointerUp();
+    if (traced) Hand.cancel(); else Hand.up();          // 这一笔是在描古字：不必再当手写去认
+    state.down = false; state.noInk = false; state.writing = false;
+  };
   /* 手写判定的结果 */
-  Hand.onCommit = (ch, cx, cy, pts) => { wake(); commit(ch, cx, cy, undefined, pts); };
+  Hand.onCommit = (ch, cx, cy, pts) => {
+    wake();
+    if (Scroll.active) { if (!Scroll.answer(ch, 'hand', pts)) Hand.onReject(Hand.strokes.map((s) => s.p)); return; }
+    commit(ch, cx, cy, undefined, pts);
+  };
   Hand.onReject = (strokes) => {            // 认不出：手迹化成真的墨
     const p = PIG[state.ink];
     for (const s of strokes) for (let i = 0; i < s.length; i += 6) fluid.splat(s[i], s[i + 1], 0, 0, [p[0] * 0.5, p[1] * 0.5, p[2] * 0.5], 9);
@@ -332,6 +409,7 @@
     pyClear(); wake(); commit(ch, x, y);
   }
   function typed(text) {
+    if (Scroll.active) return;                     // 看卷的时候不落字
     let n = 0;
     const x0 = state.px > 0 ? state.px : state.W / 2, y0 = state.py > 0 ? state.py : state.H * 0.45, gap = glyphSize() * 0.95;
     const hans = Array.from(text).filter(isHan);
@@ -360,6 +438,7 @@
   });
   window.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (Scroll.active) { hideHint(); if (Scroll.key(e)) { e.preventDefault(); press($('btn-auto'), Scroll.auto); } return; }
     if (py.buf && !composing) {
       if (e.key === 'Backspace') { e.preventDefault(); pySet(py.buf.slice(0, -1)); return; }
       if (e.key === 'Escape') { e.preventDefault(); pyClear(); return; }
@@ -397,6 +476,22 @@
   /* 手动推进若干帧（调试 / 自动化测试用：标签页在后台时浏览器会停掉动画帧） */
   MS.step = function (n, dt) { for (let i = 0; i < (n || 1); i++) tick(dt || 1 / 60); };
   function tick(dt) {
+    if (Scroll.active) {                           // 手卷：只有一个镜头沿着长卷走
+      Scroll.update(dt, state.W, state.H);
+      if (Scroll.phase === 'view') showHint(); else if (hintOn && Scroll.phase !== 'open') { hintOn = false; hintEl.classList.remove('show'); }
+      Glyphs.update(dt);
+      fluid.step(dt); fluid.render();
+      ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+      ctx.clearRect(0, 0, state.W, state.H);
+      Scroll.draw(ctx);
+      Hand.update(dt);
+      if (Scroll.active) Hand.draw(ctx, Scroll.vol.secs[Math.max(0, Scroll.cur | 0)].world);   // 写在画上的字
+      Glyphs.draw(ctx);
+      Audio.tick(dt, world);
+      const sn = Scroll.active && Scroll.cam.n > 0.5;
+      if (sn !== nightClass) { nightClass = sn; document.body.classList.toggle('night', sn); }
+      return;
+    }
     tickAuto(dt);
     if (py.timer > 0 && (py.timer -= dt) <= 0) pyPick(0);
     Hand.update(dt);

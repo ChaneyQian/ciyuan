@@ -494,6 +494,12 @@
       const h = e.seg[0];
       let tx, ty;
       e.wt += dt;
+      if (e.pin) {                                         // 定在原处游（手卷里驾车的龙）：头不走，身子照样起伏
+        const p = e.pin, bob = Math.sin(e.wt * 0.9 + p.x) * 10, ca = Math.cos(p.a), sa = Math.sin(p.a);
+        e.a = p.a; e.v = 170 * e.S; e.flipTo = e.flip = ca >= 0 ? 1 : -1;
+        for (let i = 0; i < e.N; i++) { e.seg[i].x = p.x - ca * e.gap * i; e.seg[i].y = p.y + bob - sa * e.gap * i + Math.sin(i * 0.13 + 1) * 14 * e.S * (i / e.N); }
+        return;
+      }
       if (e.goal && (e.goal.t -= dt) > 0) { tx = e.goal.x; ty = e.goal.y; }
       else if (w.pointer.moved < 4 && w.pointer.x > 0) { tx = w.pointer.x; ty = w.pointer.y; }
       else { tx = w.W * (0.5 + 0.36 * Math.sin(e.wt * 0.31)); ty = w.H * (0.45 + 0.27 * Math.sin(e.wt * 0.47 + 1)); }
@@ -563,7 +569,7 @@
       ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 
       /* —— 火珠：一点淡朱，外面一圈光晕 —— */
-      {
+      if (!e.noPearl) {
         const px = e.pearl.x, py = e.pearl.y, pr = 10.5 * S * g;
         softDot(ctx, px, py, pr * 5, w.col('red', lerp(0.16, 0.3, nk) * g), w.col('orange', 0));
         for (let k = 0; k < 5; k++) {
@@ -571,7 +577,7 @@
           mark(ctx, strand(px + Math.cos(a) * pr * 0.5, py + Math.sin(a) * pr * 0.5, a, pr * (2.6 + 0.9 * Math.sin(t * 7 + k * 1.7)), t * 6 + k, pr * 0.3, 0), taper(pr * 0.75), w.col(k % 2 ? 'orange' : 'red', 0.42));
         }
         softDot(ctx, px, py, pr * 1.5, w.col('red', 0.8), w.col('red', 0));
-        softDot(ctx, px - pr * 0.3, py - pr * 0.35, pr * 0.62, w.col('paper', 0.8), w.col('paper', 0));
+        softDot(ctx, px - pr * 0.3, py - pr * 0.35, pr * 0.62, w.col('white', 0.8), w.col('white', 0));
       }
 
       /* —— 祥云：几朵如意云头伴着龙身，淡墨勾卷、留白为云 —— */
@@ -586,7 +592,7 @@
           ctx.beginPath(); ctx.arc(x + r * sc * 0.26, y + r * sc * 0.12, r * sc * 0.52, Math.PI * 0.15, Math.PI * 1.7); ctx.stroke();   // 内卷
         }
       };
-      if (vis > 34) {
+      if (vis > 34 && !e.noCloud) {
         const c1 = raw[15], c2 = raw[33];
         ctx.save(); ctx.globalAlpha *= ease((e.age - 2) / 2);
         cloud(c1.x - rx[15] * fs * 62 * S, c1.y - ry[15] * fs * 62 * S, 1.15 * S, 0);
@@ -658,7 +664,7 @@
       crest(13, INK(0.16));
 
       /* —— 身：一串软边墨团叠成的晕染，背浓腹淡 —— */
-      for (let i = 0; i < vis; i++) {                                              // 外晕：墨往纸里渗
+      for (let i = 0; i < vis && !e.lite; i++) {                                   // 外晕：墨往纸里渗
         const hw = hwAt(i);
         softDot(ctx, P[i].x + nx[i] * fl * hw * 0.25, P[i].y + ny[i] * fl * hw * 0.25, hw * 1.7 + 3 * S, INK(0.13), INK(0));
       }
@@ -811,4 +817,5 @@
       ctx.restore();
     }
   };
+  MS.ink = { mark, strand, bez, swell, taper };          // 这几种笔法别处也用（手卷里的人物、车马）
 })();

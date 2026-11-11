@@ -108,6 +108,7 @@
   function Morph(ch, x, y, o) {
     this.ch = ch; this.o = o;
     this.stages = stagesFor(ch, o.mode);
+    if (o.reverse) this.stages = this.stages.slice().reverse();      // 顺着历史走：古 → 今
     this.n = this.stages.length;
     this.size = o.size;
     const pad = this.size * 0.62;
@@ -144,6 +145,7 @@
   Morph.prototype.update = function (dt) {
     if (this.dead) return;
     this.t += dt;
+    if (this.o.anchor) { const q = this.o.anchor(); this.x = this.tx = q[0]; this.y = this.ty = q[1]; }   // 跟着会动的画走
     const s = this.where(), o = this.o;
     const shown = s.mode === 'tr' && s.u > 0.5 ? s.idx + 1 : s.idx;
     if (shown !== this.lastStage) {
@@ -266,6 +268,25 @@
     update(dt) { for (const m of this.list) m.update(dt); if (this.list.some((m) => m.dead)) this.list = this.list.filter((m) => !m.dead); },
     draw(ctx) { for (const m of this.list) m.draw(ctx); },
     refreshFonts() { detectFonts(); },
-    stageCount(ch) { return stagesFor(ch, 'full').length; }
+    stageCount(ch) { return stagesFor(ch, 'full').length; },
+    /* 一个字最古的那一体：墨点位置 + 可以染成任意颜色的字形图 */
+    shape(ch) {
+      const all = stagesFor(ch, 'full');
+      if (!all.length) return null;
+      const st = all[all.length - 1];
+      st.colors = st.colors || {};
+      return {
+        id: st.id, pts: st.pts,
+        tint(color) {
+          if (!st.colors[color]) {
+            const c = document.createElement('canvas'); c.width = c.height = SZ;
+            const g = c.getContext('2d');
+            g.drawImage(st.canvas, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = color; g.fillRect(0, 0, SZ, SZ);
+            st.colors[color] = c;
+          }
+          return st.colors[color];
+        }
+      };
+    }
   };
 })();

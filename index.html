@@ -22,6 +22,7 @@
   </header>
 
   <nav class="tools" aria-label="工具">
+    <button id="btn-scroll" type="button" aria-pressed="false" aria-haspopup="true" title="人间词话：把一篇古文演成一幅手卷">词话</button>
     <button id="btn-auto" type="button" aria-pressed="false" title="自在：让《声律启蒙》自己写一阕">自在</button>
     <button id="btn-trace" type="button" aria-pressed="false" title="溯源：字形从楷书倒退回甲骨文（默认关）">溯源</button>
     <button id="btn-hand" type="button" aria-pressed="false" title="手写：在纸上写一个字，停笔后由程序判定">手写</button>
@@ -38,21 +39,36 @@
     <p class="hint"><span id="hint-mode"></span><b data-ink="0" class="on">1 墨</b> <b data-ink="1">2 朱</b> <b data-ink="2">3 青</b></p>
   </footer>
 
+  <div id="vols" role="menu" aria-label="人间词话 · 选一卷"></div>
+  <div id="shint" role="dialog" aria-label="怎么看这卷画">
+    <div class="how">
+      <div class="way"><span class="mouse"><i></i></span><span class="or">或</span><span class="keys"><kbd>←</kbd><kbd>→</kbd></span></div>
+      <p class="say"><span class="kbd-way">滚动滚轮，或按左右方向键</span><span class="touch-way">点卷下的段名</span></p>
+      <p class="what">拉动画卷，左右移动</p>
+      <p class="rule">赋文里空着的字，要你来补：<b>写</b>在画上，或<b>选</b>一个，或<b>描</b>画里的古字。<br>补上了，画才往下走。</p>
+      <button type="button" id="shint-ok">知道了</button>
+    </div>
+  </div>
+  <div id="swrong" aria-live="polite"></div>
   <div id="py" aria-live="polite"></div>
   <input id="ime" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="在此输入汉字" tabindex="-1">
   <noscript><p class="noscript">词源需要 JavaScript 与 WebGL。</p></noscript>
 
   <script src="js/shenglv-data.js"></script>
+  <script src="js/luoshen-data.js"></script>
   <script src="js/glyph-data.js"></script>
   <script src="js/fluid.js"></script>
   <script src="js/world.js"></script>
   <script src="js/flora.js"></script>
   <script src="js/fauna.js"></script>
   <script src="js/things.js"></script>
+  <script src="js/extras.js"></script>
   <script src="js/lexicon.js"></script>
   <script src="js/glyph.js"></script>
   <script src="js/hand.js"></script>
   <script src="js/audio.js"></script>
+  <script src="js/scroll.js"></script>
+  <script src="js/luoshen.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

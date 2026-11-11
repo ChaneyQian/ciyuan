@@ -73,7 +73,26 @@
     ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
   }
 
-  MS.util = { mulberry, clamp, lerp, ease, easeOut, hash1, noise1, brush, brushPath, leafPath, softDot, TAU };
+  /* 横贯全幅的一道染（霞、霜）：stops 是自上而下的 [位置, 颜色]。
+     在手卷里一段只是长卷的一截（w.feather > 0），两头要化开，不能齐刷刷切一刀 */
+  let bandC = null;
+  function band(ctx, w, y, h, stops) {
+    const f = w.feather || 0, to = f ? (bandC || (bandC = document.createElement('canvas'))).getContext('2d') : ctx;
+    if (f && bandC.width !== 256) { bandC.width = 256; bandC.height = 64; }
+    const y0 = f ? 0 : y, hh = f ? 64 : h, ww = f ? 256 : w.W;
+    if (f) { to.globalCompositeOperation = 'source-over'; to.clearRect(0, 0, ww, hh); }
+    const g = to.createLinearGradient(0, y0, 0, y0 + hh);
+    for (const s of stops) g.addColorStop(s[0], s[1]);
+    to.fillStyle = g; to.fillRect(0, y0, ww, hh);
+    if (!f) return;
+    const k = Math.min(0.45, f / w.W), m = to.createLinearGradient(0, 0, ww, 0);
+    m.addColorStop(0, 'rgba(0,0,0,0)'); m.addColorStop(k * 0.5, 'rgba(0,0,0,0.3)'); m.addColorStop(k, '#000');
+    m.addColorStop(1 - k, '#000'); m.addColorStop(1 - k * 0.5, 'rgba(0,0,0,0.3)'); m.addColorStop(1, 'rgba(0,0,0,0)');
+    to.globalCompositeOperation = 'destination-in'; to.fillStyle = m; to.fillRect(0, 0, ww, hh);
+    ctx.drawImage(bandC, 0, y, w.W, h);
+  }
+
+  MS.util = { mulberry, clamp, lerp, ease, easeOut, hash1, noise1, brush, brushPath, leafPath, softDot, band, TAU };
 
   /* ---------- 调色 ---------- */
   const PAL = {
@@ -479,16 +498,11 @@
     create(e, w) { e.streaks = []; for (let i = 0; i < 7; i++) e.streaks.push({ x: e.rng() * w.W, dy: (e.rng() - 0.5) * 110, rx: 160 + e.rng() * 260, ry: 8 + e.rng() * 14, c: e.rng() < 0.6 ? 'red' : 'orange' }); },
     draw(e, ctx, w) {
       const g = ease(e.age / 5), h = w.H * 0.34, y0 = e.y - h * 0.6;
-      const gr = ctx.createLinearGradient(0, y0, 0, y0 + h);
-      gr.addColorStop(0, w.col('red', 0));
-      gr.addColorStop(0.45, w.col('red', 0.2 * g));
-      gr.addColorStop(0.7, w.col('orange', 0.17 * g));
-      gr.addColorStop(1, w.col('yellow', 0));
-      ctx.fillStyle = gr;
-      ctx.fillRect(0, y0, w.W, h);
+      band(ctx, w, y0, h, [[0, w.col('red', 0)], [0.45, w.col('red', 0.2 * g)], [0.7, w.col('orange', 0.17 * g)], [1, w.col('yellow', 0)]]);
+      const f = w.feather || 0;
       for (const s of e.streaks) {
         ctx.save();
-        ctx.translate((s.x + w.t * 3) % (w.W + 600) - 300, e.y + s.dy);
+        ctx.translate(f ? f + s.rx + (s.x + w.t * 3) % Math.max(1, w.W - 2 * (f + s.rx)) : (s.x + w.t * 3) % (w.W + 600) - 300, e.y + s.dy);
         ctx.scale(1, s.ry / s.rx);
         softDot(ctx, 0, 0, s.rx, w.col(s.c, 0.2 * g), w.col(s.c, 0));
         ctx.restore();

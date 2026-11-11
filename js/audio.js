@@ -299,7 +299,24 @@
     butterfly: (t, p) => { for (let k = 0; k < 5; k++) harmonic(freq(15 + [0, 2, 1, 3, 2][k]), t + k * 0.15, { vol: 0.1, pan: p + R(-0.2, 0.2), dur: 1.1 }); },
     insects: (t, p) => { cricket(t, p); cricket(t + 0.9, -p); },
     night: (t) => phrase('xiao', [[0, 1.6], [-2, 1.0], [-3, 2.6]], t, { vol: 0.17 }),
-    day: (t) => phrase('di', [[0, 0.24], [2, 0.24], [4, 0.24], [5, 0.7], [7, 1.1]], t, { vol: 0.15 })
+    day: (t) => phrase('di', [[0, 0.24], [2, 0.24], [4, 0.24], [5, 0.7], [7, 1.1]], t, { vol: 0.15 }),
+    // —— 为古文添的字
+    frost: (t, p) => { for (let k = 0; k < 3; k++) bell(freq(17 + k * 2), t + k * 0.6, { qing: true, vol: 0.07, pan: R(-0.6, 0.6) }); },
+    light: (t, p) => { harmonic(freq(12), t, { vol: 0.2, pan: p }); harmonic(freq(16), t + 0.5, { vol: 0.16, pan: p }); harmonic(freq(19), t + 1.0, { vol: 0.12, pan: p }); },
+    pool: (t, p) => { gliss(t, 9, 1, 0.09, 0.28, p); pluck('qin', freq(-5), t + 0.9, { vol: 0.6, pan: p, vib: 1 }); },
+    rock: (t, p) => { pluck('qin', freq(-7), t, { vol: 0.75, pan: p }); pluck('qin', freq(-5), t + 0.8, { vol: 0.5, pan: p, slide: -2 }); },
+    grove: (t, p) => { pluck('qin', freq(0), t, { vol: 0.6, pan: p, vib: 1 }); phrase('xiao', [[4, 1.0], [2, 1.8]], t + 0.5, { vol: 0.13, pan: p }); },
+    orchid: (t, p) => phrase('xiao', [[7, 0.9], [9, 0.7], [7, 1.8]], t, { vol: 0.13, pan: p }),
+    zhi: (t, p) => { harmonic(freq(9), t, { vol: 0.2, pan: p }); harmonic(freq(14), t + 0.6, { vol: 0.15, pan: p }); },
+    duck: (t, p) => { flute(freq(9), t, 0.22, { xiao: true, vol: 0.1, fall: -2, pan: p }); flute(freq(7), t + 0.34, 0.3, { xiao: true, vol: 0.09, fall: -3, pan: p }); },
+    feather: (t, p) => { for (let k = 0; k < 3; k++) harmonic(freq(19 - k * 2), t + k * 0.28, { vol: 0.1, pan: p + R(-0.2, 0.2), dur: 1.2 }); },
+    pearl: (t, p) => { bell(freq(19), t, { qing: true, vol: 0.12, pan: p }); bell(freq(21), t + 0.22, { qing: true, vol: 0.09, pan: p }); },
+    banner: (t, p) => { noiseSweep(t, 1.6, 300, 800, 400, 0.8, 0.14, p); drum(t + 0.1, { vol: 0.3, f: 110, pan: p }); },
+    cart: (t, p) => { for (let k = 0; k < 4; k++) woodfish(t + k * 0.26, 300 - k * 14, 0.2); pluck('pipa', freq(4), t + 1.1, { vol: 0.24, pan: p }); },
+    horse: (t, p) => { for (let k = 0; k < 6; k++) woodfish(t + k * 0.17 + (k % 2) * 0.05, k % 2 ? 620 : 520, 0.22); },
+    person: (t, p) => phrase('qin', [[0, 0.8], [2, 0.6], [-1, 1.6]], t, { vol: 0.6, pan: p, vib: 1 }),
+    goddess: (t, p) => { gliss(t, 5, 16, 0.07, 0.26, p); phrase('xiao', [[9, 1.0], [11, 0.7], [9, 2.2]], t + 0.8, { vol: 0.14, pan: p }); },
+    tears: (t, p) => { for (let k = 0; k < 3; k++) pluck('zheng', freq(12 - k * 2), t + k * 0.7, { vol: 0.24, pan: p, bend: -2 }); }
   };
 
   /* 世界里发生的事 → 声音 */

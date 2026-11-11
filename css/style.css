@@ -182,6 +182,125 @@ body.night #hw button { background: rgba(8, 11, 16, .7); }
 #py button:hover { background: rgba(30, 28, 26, .1); }
 #py button i { font-family: var(--text); font-style: normal; font-size: 10.5px; margin-right: 3px; color: rgba(30, 28, 26, .45); vertical-align: .3em; }
 
+/* —— 人间词话：手卷 —— */
+#vols {
+  position: fixed; right: 24px; top: 68px; display: none; flex-direction: column; gap: 2px; z-index: 6;
+  padding: 7px; border-radius: 6px; background: rgba(247, 242, 230, .97); border: 1px solid rgba(30, 28, 26, .2);
+  box-shadow: 0 10px 30px rgba(30, 28, 26, .16);
+}
+#vols.show { display: flex; }
+#vols button {
+  font: inherit; font-family: var(--brush); font-size: 19px; letter-spacing: .16em; text-align: left; white-space: nowrap;
+  padding: 7px 16px 8px 12px; border: 0; border-radius: 4px; background: none; color: #1e1c1a; cursor: pointer;
+}
+#vols button:hover:not(:disabled) { background: rgba(176, 36, 30, .1); color: var(--cinnabar-deep); }
+#vols button:disabled { color: rgba(30, 28, 26, .38); cursor: default; }
+
+body.scrolling .dock, body.scrolling .verse, body.scrolling .pair,
+body.scrolling #btn-trace, body.scrolling #btn-hand, body.scrolling #btn-pinyin { display: none; }
+body.scrolling #stage { cursor: default; }
+body.scrolling .brand { display: none; }
+body.scrolling .tools { top: auto; bottom: calc(5.2vh + 8px); right: 20px; }      /* 让出上边给赋文 */
+#sbar span { font-family: var(--brush); font-size: 15px; letter-spacing: .3em; color: rgba(var(--ink), .62); padding: 2px 14px 0 0; }
+
+/* 赋文：竖排，自右而左，跟着画一起走 */
+#st { position: fixed; inset: 0; pointer-events: none; overflow: hidden; font-family: var(--brush); line-height: 1.72; color: rgba(var(--ink), .82); }
+.st-a { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; }
+.st-b { position: absolute; right: 0; top: 0; writing-mode: vertical-rl; }
+.st-b p { margin: 0; }
+.st-b i { display: inline-block; height: .55em; }
+/* 缺的字：一个空框；轮到它时框是朱色的、在呼吸；补上以后字显出来 */
+.st-b b { font-weight: 400; display: inline-block; position: relative; transition: color 1.2s; }
+.st-b b.todo { color: transparent; }
+.st-b b.todo::after { content: ""; position: absolute; inset: .12em .1em; border: 1px solid rgba(var(--ink), .3); border-radius: 2px; }
+.st-b b.now::after { border-color: var(--cinnabar); box-shadow: 0 0 0 3px rgba(176, 36, 30, .14); animation: breathe 2s ease-in-out infinite; }
+.st-b b.done { color: var(--cinnabar); }
+
+/* 题目：半句赋文缺一字，几个候选 */
+#sq {
+  position: fixed; left: 50%; bottom: calc(5.2vh + 54px); transform: translate(-50%, 10px); z-index: 4;
+  text-align: center; opacity: 0; pointer-events: none; transition: opacity .5s, transform .5s var(--ease);
+  padding: 14px 26px 12px; border-radius: 8px; background: rgba(247, 242, 230, .9); border: 1px solid rgba(30, 28, 26, .14);
+  box-shadow: 0 10px 34px rgba(30, 28, 26, .14); color: #1e1c1a;
+}
+#sq.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+#sq.nudge { animation: shake .4s; }
+#sq .q { margin: 0 0 10px; font-family: var(--brush); font-size: 30px; letter-spacing: .3em; text-indent: .3em; white-space: nowrap; }
+#sq .q u { display: inline-block; width: 1em; height: 1em; margin: 0 .16em 0 -.14em; vertical-align: -.12em; text-decoration: none; border: 1.5px solid var(--cinnabar); border-radius: 3px; animation: breathe 2s ease-in-out infinite; }
+#sq .opts { display: flex; justify-content: center; gap: 10px; }
+#sq .opts button {
+  font: inherit; cursor: pointer; width: 48px; height: 48px; border-radius: 50%; padding: 0;
+  font-family: var(--brush); font-size: 26px; line-height: 46px; color: #1e1c1a; background: rgba(255, 255, 255, .5);
+  border: 1px solid rgba(30, 28, 26, .3); transition: transform .2s var(--ease), border-color .2s, color .2s, opacity .4s;
+}
+#sq .opts button:hover:not(:disabled) { transform: translateY(-3px) scale(1.08); border-color: var(--cinnabar); color: var(--cinnabar-deep); }
+#sq .opts button.no { opacity: .28; animation: shake .4s; cursor: default; }
+#sq .tip { margin: 10px 0 0; font-family: var(--text); font-size: 11.5px; letter-spacing: .24em; text-indent: .24em; color: rgba(30, 28, 26, .5); white-space: nowrap; }
+#swrong {
+  position: fixed; left: 50%; bottom: calc(5.2vh + 200px); transform: translateX(-50%); z-index: 5; white-space: nowrap;
+  padding: 6px 16px 7px; border-radius: 99px; background: rgba(34, 30, 28, .9); color: #f4ecdd;
+  font-family: var(--text); font-size: 13px; letter-spacing: .2em; opacity: 0; pointer-events: none; transition: opacity .4s;
+}
+#swrong.show { opacity: 1; }
+@keyframes shake { 20% { translate: -6px 0; } 40% { translate: 6px 0; } 60% { translate: -4px 0; } 80% { translate: 3px 0; } }
+body.scrolling #stage { cursor: crosshair; }
+#shint .rule { margin: -14px 0 26px; font-family: var(--text); font-size: 13.5px; line-height: 2; letter-spacing: .2em; opacity: .9; }
+#shint .rule b { font-weight: 400; color: #ffb4a6; }
+@media (max-width: 760px) { #sq { padding: 10px 14px; } #sq .q { font-size: 23px; } #sq .tip { display: none; } }
+
+/* 卷下一行段名：点哪段去哪段 */
+#sbar { position: fixed; left: 0; right: 0; bottom: calc(5.2vh + 10px); display: none; justify-content: flex-start; align-items: baseline; gap: 4px; padding: 0 24px; pointer-events: none; }
+body.scrolling #sbar { display: flex; }
+#sbar button {
+  font: inherit; font-family: var(--text); font-size: 12px; letter-spacing: .3em; text-indent: .3em; pointer-events: auto; cursor: pointer;
+  padding: 4px 9px 5px; border: 0; border-bottom: 1px solid rgba(var(--ink), .2); background: none; color: rgba(var(--ink), .46);
+  transition: color .4s, border-color .4s;
+}
+#sbar button:hover { color: rgba(var(--ink), .9); }
+#sbar button.on { color: var(--cinnabar); border-color: var(--cinnabar); }
+@media (max-width: 1100px) { #sbar { bottom: calc(5.2vh + 46px); } }
+@media (max-width: 760px) { #sbar { gap: 0; } #sbar button { font-size: 10.5px; letter-spacing: .08em; text-indent: 0; padding: 4px 4px 5px; } #vols { right: 12px; top: 96px; } }
+
+/* —— 开卷提示：一层蒙版，只出现一次 —— */
+#shint {
+  position: fixed; inset: 0; z-index: 20; display: grid; place-items: center;
+  background: rgba(24, 21, 18, .52);
+  opacity: 0; visibility: hidden; transition: opacity .6s, visibility 0s .6s;
+  cursor: pointer;
+}
+#shint.show { opacity: 1; visibility: visible; transition: opacity .6s; }
+#shint .how { text-align: center; color: #f3ebdb; transform: translateY(8px); transition: transform .8s var(--ease); }
+#shint.show .how { transform: none; }
+#shint .way { display: flex; align-items: center; justify-content: center; gap: 30px; margin-bottom: 26px; }
+#shint .or { font-family: var(--text); font-size: 13px; letter-spacing: .3em; opacity: .6; }
+/* 鼠标：滚轮上下滚 */
+#shint .mouse { width: 34px; height: 54px; border: 1.6px solid currentColor; border-radius: 18px; position: relative; }
+#shint .mouse i { position: absolute; left: 50%; top: 9px; width: 4px; height: 11px; margin-left: -2px; border-radius: 2px; background: var(--cinnabar); animation: wheel 1.5s ease-in-out infinite; }
+/* 方向键：左键先亮（手卷往左看） */
+#shint .keys { display: flex; gap: 9px; }
+#shint kbd {
+  display: grid; place-items: center; width: 46px; height: 46px; border: 1.6px solid currentColor; border-radius: 7px;
+  font-family: var(--text); font-size: 20px; line-height: 1; box-shadow: 0 3px 0 rgba(243, 235, 219, .3);
+}
+#shint kbd:first-child { animation: tap 1.5s ease-in-out infinite; }
+#shint .say { margin: 0 0 8px; font-family: var(--brush); font-size: 27px; letter-spacing: .22em; text-indent: .22em; }
+#shint .what { margin: 0 0 30px; font-family: var(--text); font-size: 14px; letter-spacing: .5em; text-indent: .5em; opacity: .72; }
+#shint .touch-way { display: none; }
+#shint button {
+  font: inherit; font-family: var(--text); font-size: 13.5px; letter-spacing: .3em; text-indent: .3em; cursor: pointer;
+  padding: 8px 22px 9px; border-radius: 99px; border: 1px solid rgba(243, 235, 219, .55); background: none; color: inherit;
+  transition: background .3s, border-color .3s;
+}
+#shint button:hover { background: var(--cinnabar); border-color: var(--cinnabar); }
+@keyframes wheel { 0%, 100% { transform: translateY(0); opacity: 1; } 60% { transform: translateY(13px); opacity: .25; } }
+@keyframes tap { 0%, 100% { transform: none; background: transparent; box-shadow: 0 3px 0 rgba(243, 235, 219, .3); } 45% { transform: translateY(3px); background: var(--cinnabar); box-shadow: 0 0 0 rgba(243, 235, 219, .3); } }
+@media (hover: none) {
+  #shint .way, #shint .kbd-way { display: none; }
+  #shint .what { margin-bottom: 34px; }
+  #shint .touch-way { display: inline; }
+}
+@media (prefers-reduced-motion: reduce) { #shint .mouse i, #shint kbd:first-child { animation: none; } }
+
 /* 输入法的落点：看不见，但跟着光标走，候选框就出现在笔尖 */
 #ime { position: fixed; left: 50%; top: 50%; width: 2px; height: 26px; padding: 0; border: 0; outline: 0; opacity: 0; font-size: 16px; background: transparent; color: transparent; caret-color: transparent; pointer-events: none; }
 .noscript { position: fixed; inset: 0; display: grid; place-items: center; }
