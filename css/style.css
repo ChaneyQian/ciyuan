@@ -1,0 +1,158 @@
+/* 墨韵 · 界面只是纸边的几枚印与题跋，其余都让给画 */
+:root {
+  --paper: #ece6d8;
+  --ink: 30, 28, 26;
+  --cinnabar: #b0241e;
+  --cinnabar-deep: #8f1a16;
+  --brush: "Ma Shan Zheng", "STKaiti", "KaiTi", "Kaiti SC", "BiauKai", serif;
+  --text: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
+  --ease: cubic-bezier(.2, .7, .2, 1);
+}
+body.night {
+  --paper: #080b10;
+  --ink: 226, 224, 210;
+  --cinnabar: #d8463a;
+  --cinnabar-deep: #b0241e;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; overflow: hidden; }
+body {
+  background: var(--paper);
+  color: rgba(var(--ink), .82);
+  font-family: var(--text);
+  -webkit-font-smoothing: antialiased;
+  user-select: none; -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 2.2s ease;
+}
+canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+#stage { touch-action: none; cursor: crosshair; }
+
+/* —— 印与题 —— */
+.brand { position: fixed; left: 24px; top: 22px; display: flex; gap: 14px; align-items: flex-start; pointer-events: none; animation: rise 1.6s var(--ease) both; }
+.seal {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  width: 46px; padding: 9px 0 10px;
+  background: var(--cinnabar);
+  color: #f6ecdc; font-family: var(--brush); font-size: 27px; line-height: 1;
+  border-radius: 5px 4px 6px 3px;
+  box-shadow: inset 0 0 0 1.5px rgba(246, 236, 220, .16), inset 0 0 9px rgba(60, 0, 0, .5), 0 1px 0 rgba(0, 0, 0, .12);
+  transform: rotate(-1.2deg);
+}
+.motto {
+  margin: 4px 0 0; writing-mode: vertical-rl; letter-spacing: .34em; font-size: 12.5px;
+  color: rgba(var(--ink), .5); transition: color 2s;
+}
+.motto i, .hint i { font-style: normal; opacity: .55; margin: .5em 0; }
+.hint i { margin: 0 .7em; }
+
+/* —— 工具：四枚素钮 —— */
+.tools { position: fixed; right: 24px; top: 24px; display: flex; gap: 9px; animation: rise 1.6s .15s var(--ease) both; }
+.tools button, .chars button {
+  font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer;
+}
+.tools button {
+  font-family: var(--text); font-size: 13.5px; letter-spacing: .3em; text-indent: .3em;
+  padding: 7px 15px 8px; border-radius: 99px;
+  border: 1px solid rgba(var(--ink), .3);
+  color: rgba(var(--ink), .72);
+  background: rgba(var(--ink), .0);
+  transition: background .35s, color .35s, border-color .35s, transform .2s var(--ease);
+}
+.tools button:hover { border-color: rgba(var(--ink), .6); color: rgba(var(--ink), .95); }
+.tools button:active { transform: scale(.95); }
+.tools button[aria-pressed="true"] { background: var(--cinnabar); border-color: var(--cinnabar); color: #f8efe0; }
+.tools button:focus-visible, .chars button:focus-visible { outline: 2px solid var(--cinnabar); outline-offset: 2px; }
+
+/* —— 右侧竖题：此刻的一句《声律启蒙》 —— */
+.verse {
+  position: fixed; right: 40px; top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: row-reverse; gap: 14px; align-items: flex-start;
+  pointer-events: none; max-height: 62vh;
+}
+.verse .col {
+  writing-mode: vertical-rl; font-family: var(--brush); font-size: 23px; letter-spacing: .42em;
+  color: rgba(var(--ink), .78);
+}
+.verse .col span { display: inline-block; opacity: 0; transform: translateY(-6px); animation: drop .7s var(--ease) forwards; }
+.verse .col span.hit { color: var(--cinnabar); }
+.verse .src {
+  writing-mode: vertical-rl; font-size: 11.5px; letter-spacing: .3em; color: rgba(var(--ink), .42);
+  align-self: flex-end; opacity: 0; animation: drop 1s 1.2s var(--ease) forwards;
+}
+.verse.leaving { opacity: 0; transition: opacity .6s; }
+
+/* —— 对仗 —— */
+.pair {
+  position: fixed; left: 50%; top: 13%; transform: translateX(-50%);
+  text-align: center; pointer-events: none; opacity: 0; transition: opacity .9s;
+  white-space: nowrap;
+}
+.pair.show { opacity: 1; }
+.pair .line { font-family: var(--brush); font-size: 38px; letter-spacing: .3em; text-indent: .3em; color: rgba(var(--ink), .86); }
+.pair .line em { font-style: normal; color: var(--cinnabar); font-size: .7em; margin: 0 .1em; vertical-align: .12em; }
+.pair .src { margin-top: 8px; font-size: 12px; letter-spacing: .4em; text-indent: .4em; color: rgba(var(--ink), .46); }
+.pair .src b { font-weight: 400; color: var(--cinnabar); }
+
+/* —— 字钮 —— */
+.dock { position: fixed; left: 0; right: 0; bottom: 14px; display: flex; flex-direction: column; align-items: center; gap: 9px; pointer-events: none; animation: rise 1.6s .3s var(--ease) both; }
+.chars { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 5px; max-width: min(1040px, 94vw); pointer-events: auto; }
+.chars .grp { display: flex; gap: 5px; padding: 0 7px; position: relative; }
+.chars .grp + .grp::before { content: ""; position: absolute; left: -3px; top: 22%; bottom: 22%; width: 1px; background: rgba(var(--ink), .16); }
+.chars button {
+  width: 35px; height: 35px; border-radius: 50%;
+  font-family: var(--brush); font-size: 20px; line-height: 33px; text-align: center;
+  border: 1px solid rgba(var(--ink), .26);
+  color: rgba(var(--ink), .84);
+  background: rgba(236, 230, 216, .34);
+  transition: transform .25s var(--ease), border-color .3s, background .3s, color .3s, box-shadow .3s;
+  position: relative;
+}
+body.night .chars button { background: rgba(8, 11, 16, .34); }
+.chars button:hover { transform: translateY(-3px) scale(1.08); border-color: rgba(var(--ink), .7); }
+.chars button:active { transform: scale(.92); }
+.chars button.here { background: rgba(var(--ink), .1); border-color: rgba(var(--ink), .5); }
+.chars button.dui { border-color: var(--cinnabar); color: var(--cinnabar); box-shadow: 0 0 0 3px rgba(176, 36, 30, .13); animation: breathe 2.4s ease-in-out infinite; }
+.chars button::after {
+  content: attr(data-tip); position: absolute; left: 50%; bottom: calc(100% + 9px); transform: translate(-50%, 4px);
+  font-family: var(--text); font-size: 11.5px; letter-spacing: .12em; line-height: 1.5; white-space: nowrap;
+  padding: 4px 9px 5px; border-radius: 3px; color: #f4ecdd; background: rgba(34, 30, 28, .92);
+  opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+}
+.chars button:hover::after, .chars button:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
+.hint { margin: 0; font-size: 11.5px; letter-spacing: .26em; color: rgba(var(--ink), .4); pointer-events: auto; text-align: center; }
+.hint b { font-weight: 400; cursor: pointer; padding: 2px 3px; border-bottom: 1px solid transparent; transition: color .3s, border-color .3s; }
+.hint b.on { color: rgba(var(--ink), .9); border-color: currentColor; }
+.hint b[data-ink="1"].on { color: var(--cinnabar); }
+.hint b[data-ink="2"].on { color: #34685c; }
+body.night .hint b[data-ink="2"].on { color: #7cd4c4; }
+
+/* 输入法的落点：看不见，但跟着光标走，候选框就出现在笔尖 */
+#ime { position: fixed; left: 50%; top: 50%; width: 2px; height: 26px; padding: 0; border: 0; outline: 0; opacity: 0; font-size: 16px; background: transparent; color: transparent; caret-color: transparent; pointer-events: none; }
+.noscript { position: fixed; inset: 0; display: grid; place-items: center; }
+
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+.brand { animation-name: rise; }
+@keyframes drop { to { opacity: 1; transform: none; } }
+@keyframes breathe { 50% { box-shadow: 0 0 0 6px rgba(176, 36, 30, .05); } }
+
+@media (max-width: 760px) {
+  .brand { left: 14px; top: 14px; gap: 9px; }
+  .seal { width: 38px; font-size: 22px; }
+  .tools { right: 12px; top: 14px; gap: 6px; }
+  .tools button { padding: 6px 10px 7px; font-size: 12.5px; letter-spacing: .16em; text-indent: .16em; }
+  .verse { right: 14px; top: 46%; }
+  .verse .col { font-size: 19px; }
+  .pair .line { font-size: 28px; }
+  .chars { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; max-width: 100vw; padding: 6px 12px; scrollbar-width: none; }
+  .chars::-webkit-scrollbar { display: none; }
+  .chars button { flex: none; width: 38px; height: 38px; line-height: 36px; }
+  .chars button::after { display: none; }
+  .hint { font-size: 10.5px; letter-spacing: .14em; padding: 0 10px; }
+}
+@media (hover: none) { .kbd-only { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .brand, .tools, .dock { animation: none; }
+  .chars button.dui { animation: none; }
+}

@@ -1,0 +1,7 @@
+# 参考视频与本地工具配置不入库
+*.mp4
+.claude/
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>墨韵 · 字溯其源，声律成境</title>
+<meta name="description" content="写一个字，看它从楷书一路退回甲骨文，再活成它所画的那件东西。词库取自《声律启蒙》，乐声以中式乐器合成。">
+<meta name="theme-color" content="#ece6d8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='6' y='6' width='52' height='52' rx='8' fill='%23b0241e'/%3E%3Ccircle cx='32' cy='32' r='15' fill='none' stroke='%23f6ecdc' stroke-width='5'/%3E%3Ccircle cx='32' cy='32' r='4' fill='%23f6ecdc'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;600&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="ink" aria-hidden="true"></canvas>
+  <canvas id="stage" aria-label="墨韵画布：打字或点选下方的字，字会活过来"></canvas>
+
+  <header class="brand">
+    <div class="seal" aria-label="墨韵"><span>墨</span><span>韵</span></div>
+    <p class="motto">字溯其源<i>·</i>声律成境</p>
+  </header>
+
+  <nav class="tools" aria-label="工具">
+    <button id="btn-auto" type="button" aria-pressed="false" title="自在：让《声律启蒙》自己写一阕">自在</button>
+    <button id="btn-trace" type="button" aria-pressed="true" title="溯源：字形从楷书倒退回甲骨文">溯源</button>
+    <button id="btn-sound" type="button" aria-pressed="false" title="有声：古琴、古筝、琵琶、笛箫、编钟">有声</button>
+    <button id="btn-shot" type="button" title="留影：存一张画">留影</button>
+  </nav>
+
+  <aside class="verse" id="verse" aria-live="polite"></aside>
+  <div class="pair" id="pair" aria-live="polite"></div>
+
+  <footer class="dock">
+    <div class="chars" id="chars" role="toolbar" aria-label="可以活过来的字"></div>
+    <p class="hint"><span class="kbd-only">键盘直接打字，字会溯源而活<i>·</i></span>点字落笔<i>·</i>拖动落墨<i>·</i><span class="kbd-only">按住 Shift 泼水<i>·</i></span><b data-ink="0" class="on">1 墨</b> <b data-ink="1">2 朱</b> <b data-ink="2">3 青</b></p>
+  </footer>
+
+  <input id="ime" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="在此输入汉字" tabindex="-1">
+  <noscript><p class="noscript">墨韵需要 JavaScript 与 WebGL。</p></noscript>
+
+  <script src="js/shenglv-data.js"></script>
+  <script src="js/glyph-data.js"></script>
+  <script src="js/fluid.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/flora.js"></script>
+  <script src="js/fauna.js"></script>
+  <script src="js/things.js"></script>
+  <script src="js/lexicon.js"></script>
+  <script src="js/glyph.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
