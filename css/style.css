@@ -200,10 +200,10 @@ body.scrolling .dock, body.scrolling .verse, body.scrolling .pair,
 body.scrolling #btn-trace, body.scrolling #btn-hand, body.scrolling #btn-pinyin { display: none; }
 body.scrolling #stage { cursor: default; }
 body.scrolling .brand { display: none; }
-body.scrolling .tools { top: auto; bottom: calc(5.2vh + 8px); right: 20px; }      /* 让出上边给赋文 */
+body.scrolling .tools { top: auto; bottom: calc(5.2vh + 8px); right: 20px; }      /* 让出上边给原文 */
 #sbar span { font-family: var(--brush); font-size: 15px; letter-spacing: .3em; color: rgba(var(--ink), .62); padding: 2px 14px 0 0; }
 
-/* 赋文：竖排，自右而左，跟着画一起走 */
+/* 原文：竖排，自右而左，跟着画一起走 */
 #st { position: fixed; inset: 0; pointer-events: none; overflow: hidden; font-family: var(--brush); line-height: 1.72; color: rgba(var(--ink), .82); }
 .st-a { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; }
 .st-b { position: absolute; right: 0; top: 0; writing-mode: vertical-rl; }
@@ -216,7 +216,7 @@ body.scrolling .tools { top: auto; bottom: calc(5.2vh + 8px); right: 20px; }    
 .st-b b.now::after { border-color: var(--cinnabar); box-shadow: 0 0 0 3px rgba(176, 36, 30, .14); animation: breathe 2s ease-in-out infinite; }
 .st-b b.done { color: var(--cinnabar); }
 
-/* 题目：半句赋文缺一字，几个候选 */
+/* 题目：半句原文缺一字，几个候选 */
 #sq {
   position: fixed; left: 50%; bottom: calc(5.2vh + 54px); transform: translate(-50%, 10px); z-index: 4;
   text-align: center; opacity: 0; pointer-events: none; transition: opacity .5s, transform .5s var(--ease);

@@ -29,28 +29,38 @@ EXTRA = {
  "晓":"曉","晨":"晨","暮":"暮","晚":"晚","晴":"晴","寒":"寒","暑":"暑","古":"古","今":"今","我":"我","你":"你",
  # 《洛神赋》一卷添的字
  "波":"波","芝":"芝","蕖":"蕖","珠":"珠","羽":"羽","凫":"鳧","泪":"淚涙","渊":"淵","曙":"曙","神":"神","岩":"巖岩嵒","旗":"旗","流":"流","鲸":"鯨","禽":"禽","驾":"駕",
+ # 《琵琶行》一卷添的字
+ "枫":"楓","弦":"弦絃","面":"面","城":"城","绡":"綃","芦":"蘆","鹃":"鵑","猿":"猿猨","瓶":"瓶缾","骑":"騎","刀":"刀","帛":"帛","泣":"泣","衫":"衫",
 }
 STAGES = ["oracle", "bronze", "seal"]
 def api(titles):
     q = urllib.parse.urlencode({"action":"query","titles":"|".join(titles),"prop":"imageinfo","iiprop":"url","iiurlwidth":"500","format":"json","maxlag":"5"})
-    return json.load(urllib.request.urlopen(urllib.request.Request("https://commons.wikimedia.org/w/api.php?" + q, headers=UA), timeout=30))
+    for attempt in range(5):
+        try:
+            return json.load(urllib.request.urlopen(urllib.request.Request("https://commons.wikimedia.org/w/api.php?" + q, headers=UA), timeout=30))
+        except urllib.error.HTTPError as e:
+            if e.code != 429: raise
+            ra = min(600, int(e.headers.get("Retry-After", "60") or 60)); print("api 429 sleep", ra, flush=True); time.sleep(ra + 3)
+    raise SystemExit("api: still throttled, try again later")
+# plan.json 记着查到的缩略图地址；"_asked" 记着已经问过的字。字表添了新字，只去问新添的那几个。
 plan_path = os.path.join(OUT, "plan.json")
-if os.path.exists(plan_path):
-    plan = json.load(open(plan_path, encoding="utf-8"))
-else:
-    wanted = [(s, f, st, f"File:{f}-{st}.svg") for grp in (CORE, EXTRA) for s, forms in grp.items() for f in forms for st in STAGES]
-    plan = {}
-    for i in range(0, len(wanted), 40):
-        batch = wanted[i:i+40]
-        d = api([w[3] for w in batch])
-        norm = {n["from"]: n["to"] for n in d["query"].get("normalized", [])}
-        pages = {p["title"]: p for p in d["query"]["pages"].values()}
-        for simp, form, st, title in batch:
-            p = pages.get(norm.get(title, title))
-            if p and "imageinfo" in p and p["imageinfo"][0].get("thumburl"):
-                plan.setdefault(simp + "|" + st, {"form": form, "thumb": p["imageinfo"][0]["thumburl"], "page": p["imageinfo"][0].get("descriptionurl", "")})
-        time.sleep(1.0)
+plan = json.load(open(plan_path, encoding="utf-8")) if os.path.exists(plan_path) else {}
+asked = set(plan.get("_asked", [])) | {k.split("|")[0] for k in plan if "|" in k}
+wanted = [(s, f, st, f"File:{f}-{st}.svg") for grp in (CORE, EXTRA) for s, forms in grp.items() if s not in asked for f in forms for st in STAGES]
+for i in range(0, len(wanted), 40):
+    batch = wanted[i:i+40]
+    d = api([w[3] for w in batch])
+    norm = {n["from"]: n["to"] for n in d["query"].get("normalized", [])}
+    pages = {p["title"]: p for p in d["query"]["pages"].values()}
+    for simp, form, st, title in batch:
+        p = pages.get(norm.get(title, title))
+        if p and "imageinfo" in p and p["imageinfo"][0].get("thumburl"):
+            plan.setdefault(simp + "|" + st, {"form": form, "thumb": p["imageinfo"][0]["thumburl"], "page": p["imageinfo"][0].get("descriptionurl", "")})
+    time.sleep(1.0)
+if wanted:
+    plan["_asked"] = sorted(asked | {w[0] for w in wanted})
     json.dump(plan, open(plan_path, "w", encoding="utf-8"), ensure_ascii=False)
+plan = {k: v for k, v in plan.items() if "|" in k}
 print("planned", len(plan), flush=True)
 got = 0
 for key, info in plan.items():

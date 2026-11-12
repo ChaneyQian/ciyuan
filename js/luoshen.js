@@ -192,5 +192,4 @@
       { X: left[8] + 40, y: 520, r: 620 }                  // 蔽光，入夜
     ]
   };
-  MS.Scrolls.pipa = { id: 'pipa', title: '琵琶行', label: '卷二 · 琵琶行', pending: true };
 })();

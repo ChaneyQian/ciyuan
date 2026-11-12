@@ -1,4 +1,4 @@
-/* 词源 · lexicon.js — 词库：全部取自《声律启蒙》
+/* 词源 · lexicon.js — 词库：起于《声律启蒙》，随所演的古文扩充
  * MS.CHARS   可以「活过来」的字：它化成什么（kind）、平仄（tone）、字源（note）、别名（alias）
  * MS.Lex     从《声律启蒙》全文（shenglv-data.js）里算出：对仗关系、可引的句子
  */
@@ -23,7 +23,7 @@
     '烟': { kind: 'mist', tone: '平', group: '天', note: '形声字，从火垔声', alias: '岚霭' },
     // —— 山水
     '山': { kind: 'mountain', tone: '平', group: '地', note: '象群峰并立之形', alias: '峰岭岳' },
-    '水': { kind: 'water', tone: '仄', group: '地', note: '象流水之形，中为水脉，旁为水点', alias: '江河溪泉' },
+    '水': { kind: 'water', tone: '仄', group: '地', note: '象流水之形，中为水脉，旁为水点', alias: '江河溪' },
     // —— 草木
     '竹': { kind: 'bamboo', tone: '仄', group: '木', note: '象竹叶下垂之形', alias: '篁' },
     '松': { kind: 'pine', tone: '平', group: '木', note: '形声字，从木公声' },
@@ -83,7 +83,12 @@
     '神': { only: 'scroll', kind: 'goddess', tone: '平', group: '人', note: '从示申声；「申」本象闪电' },
     '人': { only: 'scroll', kind: 'person', tone: '平', group: '人', note: '象人侧立之形' },
     '马': { only: 'scroll', kind: 'horse', tone: '仄', group: '人', note: '象马之形，有鬃、尾、四足' },
-    '泪': { kind: 'tears', tone: '仄', group: '人', note: '目中之水；古作「淚」，从水戾声' }
+    '泪': { kind: 'tears', tone: '仄', group: '人', note: '目中之水；古作「淚」，从水戾声' },
+    // —— 为演《琵琶行》添的
+    '枫': { kind: 'maple', tone: '平', group: '木', note: '形声字，从木风声；霜后叶丹' },
+    '泉': { kind: 'spring', tone: '平', group: '地', note: '象水从石穴中流出之形' },
+    '冰': { kind: 'ice', tone: '平', group: '地', note: '古作「仌」，象冰裂之纹，后加水旁' },
+    '酒': { kind: 'wine', tone: '仄', group: '器', note: '从水从酉；「酉」象酒坛之形' }
   };
   // 拼音（内置拼音输入用）与笔画数（手写判定用）
   const PY = {
@@ -94,7 +99,8 @@
     '春': 'chun', '夏': 'xia', '秋': 'qiu', '冬': 'dong', '夜': 'ye', '昼': 'zhou', '空': 'kong',
     '霜': 'shuang', '雾': 'wu', '光': 'guang', '曙': 'shu', '川': 'chuan', '波': 'bo', '渊': 'yuan', '岩': 'yan',
     '林': 'lin', '兰': 'lan', '芝': 'zhi', '蕖': 'qu', '鸿': 'hong', '凫': 'fu', '羽': 'yu',
-    '珠': 'zhu', '旗': 'qi', '车': 'che', '神': 'shen', '人': 'ren', '马': 'ma', '泪': 'lei'
+    '珠': 'zhu', '旗': 'qi', '车': 'che', '神': 'shen', '人': 'ren', '马': 'ma', '泪': 'lei',
+    '枫': 'feng', '泉': 'quan', '冰': 'bing', '酒': 'jiu'
   };
   const STROKES = {
     '日': 4, '月': 4, '星': 9, '云': 4, '雨': 8, '雪': 11, '风': 4, '雷': 13, '虹': 9, '霞': 17, '烟': 10,
@@ -104,7 +110,8 @@
     '春': 9, '夏': 10, '秋': 9, '冬': 5, '夜': 8, '昼': 9, '空': 8,
     '霜': 17, '雾': 13, '光': 6, '曙': 17, '川': 3, '波': 8, '渊': 11, '岩': 8,
     '林': 8, '兰': 5, '芝': 6, '蕖': 14, '鸿': 11, '凫': 6, '羽': 6,
-    '珠': 10, '旗': 14, '车': 4, '神': 9, '人': 2, '马': 3, '泪': 8
+    '珠': 10, '旗': 14, '车': 4, '神': 9, '人': 2, '马': 3, '泪': 8,
+    '枫': 8, '泉': 9, '冰': 6, '酒': 10
   };
   for (const ch in C) { C[ch].py = PY[ch]; C[ch].strokes = STROKES[ch]; }
   MS.CHARS = C;

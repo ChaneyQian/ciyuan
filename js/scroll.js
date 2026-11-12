@@ -6,7 +6,7 @@
  * 每一段（section）有自己的一小方天地（一个 MS.World），所以字库里那些会活的字都能直接落进去。
  *
  * 画是看画的人写出来的：
- *   赋文里空着一些字（字眼）。镜头走到缺字处就停下，等你把那个字补上——
+ *   原文里空着一些字（字眼）。镜头走到缺字处就停下，等你把那个字补上——
  *     写 —— 直接在画上写出这个字（手写判定）；
  *     选 —— 在几个候选里点一个；
  *     描 —— 画里有它淡淡的古字，拿笔描出来。
@@ -94,6 +94,17 @@
   }
   S.secAt = function (X) { for (const s of S.vol.secs) if (X >= s.x0 && X < s.x0 + s.w) return s; return null; };
 
+  /* 往某一段里直接放一个灵（不经字库：一卷自己的东西，如裂帛、银瓶） */
+  S.put = function (sec, kind, x, y, extra) {
+    const w = sec.world, K = MS.Kinds[kind];
+    if (!K) return null;
+    const e = Object.assign({ id: w.uid++, kind, ch: '', x, y, age: 0, fade: 1, life: K.life || Infinity, seed: (Math.random() * 1e9) | 0, z: K.z || 50 }, extra);
+    e.rng = mulberry(e.seed);
+    K.create(e, w);
+    w.ents.push(e); w.ents.sort((a, b) => a.z - b.z);
+    return e;
+  };
+
   /* ---------- 缺字：画往下走的关口 ---------- */
   S.beat = function () { const v = S.vol; return v && v.bi < v.beats.length ? v.beats[v.bi] : null; };
   /* 当前缺字处镜头该停在哪（走了几成）；全补完了就是卷尾 */
@@ -110,7 +121,7 @@
     S.auto = false;
   };
 
-  /* ---------- 赋文：一段一方竖排的题字，缺的字空着 ---------- */
+  /* ---------- 原文：一段一方竖排的题字，缺的字空着 ---------- */
   const textBox = document.createElement('div'); textBox.id = 'st';
   const bar = document.createElement('div'); bar.id = 'sbar';
   const ask = document.createElement('div'); ask.id = 'sq';
@@ -120,7 +131,7 @@
     vol.secs.forEach((sec, si) => {
       const d = sec.def;
       if (d.lines) {
-        // 先定下每个字眼是赋文里的哪一个字（同一个字出现几次时靠 ctx 认）
+        // 先定下每个字眼是原文里的哪一个字（同一个字出现几次时靠 ctx 认）
         const where = {};
         sec.wake.forEach((o, k) => {
           for (let i = d.lines[0]; i <= d.lines[1]; i++) {
@@ -158,7 +169,7 @@
     });
   }
 
-  /* 出题：半句赋文，缺一个字，下面几个候选 */
+  /* 出题：半句原文，缺一个字，下面几个候选 */
   function options(b) {
     if (b.o.pick) return b.o.pick;
     const pool = [], seen = new Set([b.o.ch]);
@@ -224,13 +235,13 @@
         o.bloomed = true;
         for (const kc of (o.key ? [o.key] : []).concat(o.also || [])) sec.world.spawn(kc, o.x, o.y);
         if (o.then) o.then(sec, S, o);
-        if (S.onSound) S.onSound('bloom', { kind: def ? def.kind : 'mountain' });
+        if (S.onSound) { if (o.sound) S.onSound('song', { name: o.sound }); else S.onSound('bloom', { kind: def ? def.kind : 'mountain' }); }
       }
     });
     // 等字演完，镜头再往下一处走
     const v = S.vol;
     while (v.bi < v.beats.length && v.beats[v.bi].o.done) v.bi++;
-    S.hold = (m && m.n ? m.tIn + m.n * m.hold + (m.n - 1) * m.tr + m.tOut : 3) * 0.78; S.autoT = 0; S.shown = undefined; ask.className = '';
+    S.hold = Math.max((m && m.n ? m.tIn + m.n * m.hold + (m.n - 1) * m.tr + m.tOut : 3) * 0.78, o.stay || 0); S.autoT = 0; S.shown = undefined; ask.className = '';
     if (S.onSolve) S.onSolve(o, sec);
   }
   /* 拿笔描画里的古字：墨点盖住它一半以上，就算描成了 */
@@ -295,7 +306,7 @@
     if (!S.active) return;
     S.W = W; S.H = H; S.t += dt;
     const vol = S.vol;
-    if (S.phase === 'open') { S.u += dt / 2.4; S.fluid.fade(Math.exp(-dt * 3)); if (S.u >= 1) { S.u = 1; S.phase = 'view'; S.pt = gate(); } }
+    if (S.phase === 'open') { S.u += dt / 2.4; S.fluid.fade(Math.exp(-dt * 3)); if (S.u >= 1) { S.u = 1; S.phase = 'view'; if (vol.def.linger) S.hold = vol.def.linger; else S.pt = gate(); } }
     else if (S.phase === 'close') { S.u -= dt / 1.5; if (S.u <= 0) { finish(); return; } }
     // 一个字演完了：往下一处缺字走
     if (S.hold > 0 && (S.hold -= dt) <= 0) S.pt = gate();
@@ -326,7 +337,7 @@
       // 要等某个字补上才现身的东西：慢慢显出来
       for (const pr of (sec.def.back || []).concat(sec.def.front || [])) {
         const o = pr[3]; if (!o || !o.need) continue;
-        const on = sec.wake.some((x) => x.ch === o.need && x.bloomed);
+        const on = sec.wake.some((x) => (x.id || x.ch) === o.need && x.bloomed);
         o._a = clamp((o._a || 0) + (on ? dt / 1.6 : -dt), 0, 1);
       }
       if (sec.def.tick) sec.def.tick(sec, dt, S);
@@ -507,6 +518,36 @@
    *  画中之物（都按水墨来：淡墨晕染作体，要紧处提线，颜色只点一点）
    * ===================================================================== */
 
+  /* 仕女的头面（颈根在 0,-203）与士人的头面（颈根在 0,-170）：坐着的人也用，挪一挪就是 */
+  function ladyHead(ctx, w, t, a, wind) {
+    const INK = (v) => w.ink(v * a), RED = (v) => w.col('red', v * a), WHITE = (v) => w.col('white', v * a);
+    mark(ctx, [1, -203, 2.5, -213], () => 6.5, WHITE(0.98));
+    ctx.beginPath(); ctx.ellipse(3.5, -225, 10.5, 13.2, 0.06, 0, TAU); ctx.fillStyle = WHITE(0.98); ctx.fill();
+    ctx.strokeStyle = INK(0.42); ctx.lineWidth = 0.9; ctx.beginPath(); ctx.ellipse(3.5, -225, 10.5, 13.2, 0.06, -0.9, 1.9); ctx.stroke();
+    ctx.strokeStyle = INK(0.8); ctx.lineWidth = 1.1; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(6.4, -227.4); ctx.quadraticCurveTo(9.4, -228.6, 12, -227.2); ctx.moveTo(5.6, -231.6); ctx.quadraticCurveTo(9.4, -233.6, 12.8, -231.4); ctx.stroke();
+    ctx.fillStyle = RED(0.85); ctx.beginPath(); ctx.ellipse(10.4, -219.4, 1.8, 1.1, 0, 0, TAU); ctx.fill();
+    // 云髻峨峨
+    mark(ctx, strand(-7, -228, Math.PI / 2 + 0.3, 64, t * 1.5, 3 * wind, 0.03), taper(8.5), INK(0.8));
+    ctx.fillStyle = INK(0.88); ctx.beginPath(); ctx.ellipse(-0.6, -232, 12.2, 9.6, -0.22, 0, TAU); ctx.fill();
+    ctx.strokeStyle = INK(0.88); ctx.lineWidth = 4.4;
+    ctx.beginPath(); ctx.arc(-5, -250, 8, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.arc(8, -251, 6.6, 0, TAU); ctx.stroke();
+    ctx.fillStyle = w.col('yellow', 0.95 * a);            // 金翠首饰
+    ctx.beginPath(); ctx.arc(2, -241, 2.2, 0, TAU); ctx.arc(-9, -240, 1.6, 0, TAU); ctx.arc(11, -243, 1.5, 0, TAU); ctx.fill();
+    ctx.strokeStyle = w.col('yellow', 0.9 * a); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(11, -244); ctx.lineTo(24, -251); ctx.stroke();
+  }
+  function manHead(ctx, w, t, a, beard) {
+    const INK = (v) => w.ink(v * a), WHITE = (v) => w.col('white', v * a);
+    mark(ctx, [0, -170, 1.5, -180], () => 7, WHITE(0.98));
+    ctx.beginPath(); ctx.ellipse(2.5, -191, 10.5, 12.5, 0.05, 0, TAU); ctx.fillStyle = WHITE(0.98); ctx.fill();
+    ctx.strokeStyle = INK(0.45); ctx.lineWidth = 0.9; ctx.beginPath(); ctx.ellipse(2.5, -191, 10.5, 12.5, 0.05, -0.9, 1.9); ctx.stroke();
+    ctx.strokeStyle = INK(0.8); ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(5.5, -193); ctx.lineTo(10.6, -193.4); ctx.moveTo(5, -197); ctx.lineTo(11.2, -197.6); ctx.stroke();
+    if (beard) mark(ctx, strand(8, -182, Math.PI / 2 + 0.1, 20, t, 1, 0), taper(5), INK(0.6));
+    ctx.fillStyle = INK(0.88); ctx.beginPath(); ctx.ellipse(-1, -198, 11.5, 8.6, -0.2, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-8, -203); ctx.lineTo(-5, -222); ctx.lineTo(8, -219); ctx.lineTo(7, -203); ctx.closePath(); ctx.fill();   // 冠
+  }
+  S.parts = { ladyHead, manHead };
+
   /* 仕女 / 神女。面朝 face（-1 朝左，即朝卷尾）；衣带向身后飘 */
   P.lady = function (ctx, w, x, y, o, env) {
     const t = env.t + (o.ph || 0), s = o.s || 1, f = o.face || -1, a = o.alpha == null ? 1 : o.alpha;
@@ -562,20 +603,7 @@
     // 颈、面
     ctx.save();
     if (o.back) { ctx.translate(3, 0); ctx.scale(-1, 1); ctx.translate(-3, 0); }           // 回眸：只把头转过去
-    mark(ctx, [1, -203, 2.5, -213], () => 6.5, WHITE(0.98));
-    ctx.beginPath(); ctx.ellipse(3.5, -225, 10.5, 13.2, 0.06, 0, TAU); ctx.fillStyle = WHITE(0.98); ctx.fill();
-    ctx.strokeStyle = INK(0.42); ctx.lineWidth = 0.9; ctx.beginPath(); ctx.ellipse(3.5, -225, 10.5, 13.2, 0.06, -0.9, 1.9); ctx.stroke();
-    ctx.strokeStyle = INK(0.8); ctx.lineWidth = 1.1; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(6.4, -227.4); ctx.quadraticCurveTo(9.4, -228.6, 12, -227.2); ctx.moveTo(5.6, -231.6); ctx.quadraticCurveTo(9.4, -233.6, 12.8, -231.4); ctx.stroke();
-    ctx.fillStyle = RED(0.85); ctx.beginPath(); ctx.ellipse(10.4, -219.4, 1.8, 1.1, 0, 0, TAU); ctx.fill();
-    // 云髻峨峨
-    mark(ctx, strand(-7, -228, Math.PI / 2 + 0.3, 64, t * 1.5, 3 * wind, 0.03), taper(8.5), INK(0.8));
-    ctx.fillStyle = INK(0.88); ctx.beginPath(); ctx.ellipse(-0.6, -232, 12.2, 9.6, -0.22, 0, TAU); ctx.fill();
-    ctx.strokeStyle = INK(0.88); ctx.lineWidth = 4.4;
-    ctx.beginPath(); ctx.arc(-5, -250, 8, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.arc(8, -251, 6.6, 0, TAU); ctx.stroke();
-    ctx.fillStyle = w.col('yellow', 0.95 * a);            // 金翠首饰
-    ctx.beginPath(); ctx.arc(2, -241, 2.2, 0, TAU); ctx.arc(-9, -240, 1.6, 0, TAU); ctx.arc(11, -243, 1.5, 0, TAU); ctx.fill();
-    ctx.strokeStyle = w.col('yellow', 0.9 * a); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(11, -244); ctx.lineTo(24, -251); ctx.stroke();
+    ladyHead(ctx, w, t, a, wind);
     ctx.restore();
     ctx.restore();
     if (env.hit && !o.noHit) env.hit(x, y - 120 * s, 100 * s, () => { o._wave = 1; if (env.S.onSound) env.S.onSound('touch', {}); }, env.sec);
@@ -596,13 +624,7 @@
     const arm = { stand: [12, -160, 28, -134, 30, -100, 22, -74], point: [12, -160, 36, -158, 60, -166, 80, -176], hold: [12, -160, 30, -150, 40, -170, 42, -196] }[o.pose || 'stand'];
     mark(ctx, arm, (tt) => 14 + 20 * tt * (o.pose === 'stand' ? 1 : 0.5), INK(tone)); mark(ctx, arm, swell(1.6), INK(0.6));
     mark(ctx, [-17, -128, 0, -124, 17, -128], () => 5, w.col('red', 0.5 * a));
-    mark(ctx, [0, -170, 1.5, -180], () => 7, WHITE(0.98));
-    ctx.beginPath(); ctx.ellipse(2.5, -191, 10.5, 12.5, 0.05, 0, TAU); ctx.fillStyle = WHITE(0.98); ctx.fill();
-    ctx.strokeStyle = INK(0.45); ctx.lineWidth = 0.9; ctx.beginPath(); ctx.ellipse(2.5, -191, 10.5, 12.5, 0.05, -0.9, 1.9); ctx.stroke();
-    ctx.strokeStyle = INK(0.8); ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(5.5, -193); ctx.lineTo(10.6, -193.4); ctx.moveTo(5, -197); ctx.lineTo(11.2, -197.6); ctx.stroke();
-    if (o.beard !== false) mark(ctx, strand(8, -182, Math.PI / 2 + 0.1, 20, t, 1, 0), taper(5), INK(0.6));
-    ctx.fillStyle = INK(0.88); ctx.beginPath(); ctx.ellipse(-1, -198, 11.5, 8.6, -0.2, 0, TAU); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(-8, -203); ctx.lineTo(-5, -222); ctx.lineTo(8, -219); ctx.lineTo(7, -203); ctx.closePath(); ctx.fill();   // 冠
+    manHead(ctx, w, t, a, o.beard !== false);
     ctx.restore();
   };
 
@@ -744,8 +766,13 @@
     for (let i = 0; i < n; i++) {
       const bx = x + (noise1(i * 3.1 + x) - 0.5) * (o.w || 200), h = 70 + noise1(i * 7 + x) * 90, sw = Math.sin(t * 1.2 + i) * 0.06 + w.wind * 0.2;
       const pp = strand(bx, y, -Math.PI / 2 + (noise1(i + x) - 0.5) * 0.4 + sw, h, t + i, 3, 0.05);
-      mark(ctx, pp, taper(3.4), w.ink(0.5));
-      softDot(ctx, pp[pp.length - 2], pp[pp.length - 1], 9, w.ink(0.3), w.ink(0));
+      mark(ctx, pp, taper(3.4), o.c ? w.col(o.c, 0.62) : w.ink(0.5));
+      const ex = pp[pp.length - 2], ey = pp[pp.length - 1];
+      if (o.plume) {                                          // 荻花：梢头一穗白絮，顺风偏着
+        const pl = strand(ex, ey, -Math.PI / 2 + 0.9 + sw * 3, 30 + noise1(i + x) * 16, t * 1.6 + i, 4, 0.5);
+        mark(ctx, pl, (tt) => 9 * Math.sin(Math.PI * Math.pow(tt, 0.6)) + 1, w.col('white', 0.86));
+        mark(ctx, pl, taper(1), w.ink(0.24));
+      } else softDot(ctx, ex, ey, 9, w.ink(0.3), w.ink(0));
     }
   };
 })();

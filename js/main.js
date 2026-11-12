@@ -295,7 +295,7 @@
     g.fillStyle = '#f6ecdc'; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.font = (s * 0.62) + 'px "Ma Shan Zheng","STKaiti","KaiTi",serif';
     g.fillText('词', x + s / 2, y + s * 0.52); g.fillText('源', x + s / 2, y + s * 1.36);
-    if (state.verse) {
+    if (state.verse && !Scroll.active) {
       g.fillStyle = world.night ? 'rgba(226,224,210,.75)' : 'rgba(30,28,26,.72)';
       g.font = (17 * k) + 'px "Ma Shan Zheng","STKaiti","KaiTi",serif';
       g.textAlign = 'right';

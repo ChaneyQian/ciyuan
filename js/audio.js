@@ -316,11 +316,37 @@
     horse: (t, p) => { for (let k = 0; k < 6; k++) woodfish(t + k * 0.17 + (k % 2) * 0.05, k % 2 ? 620 : 520, 0.22); },
     person: (t, p) => phrase('qin', [[0, 0.8], [2, 0.6], [-1, 1.6]], t, { vol: 0.6, pan: p, vib: 1 }),
     goddess: (t, p) => { gliss(t, 5, 16, 0.07, 0.26, p); phrase('xiao', [[9, 1.0], [11, 0.7], [9, 2.2]], t + 0.8, { vol: 0.14, pan: p }); },
+    maple: (t, p) => { pluck('qin', freq(2), t, { vol: 0.6, pan: p, vib: 1 }); phrase('xiao', [[4, 0.9], [2, 0.7], [1, 1.8]], t + 0.4, { vol: 0.13, pan: p, fall: -2 }); },
+    wine: (t, p) => { bell(freq(14), t, { qing: true, vol: 0.1, pan: p }); phrase('pipa', [[7, 0.2], [9, 0.2], [7, 0.4], [4, 0.6]], t + 0.25, { vol: 0.26, pan: p }); },
+    spring: (t, p) => { for (let k = 0; k < 6; k++) pluck('zheng', freq(14 - k), t + k * 0.24 + R(0, 0.05), { vol: 0.2, pan: p + R(-0.2, 0.2) }); },
+    ice: (t, p) => { for (let k = 0; k < 3; k++) bell(freq(20 - k * 3), t + k * 0.5, { qing: true, vol: 0.09, pan: p }); noiseSweep(t + 1.2, 0.25, 3000, 6000, 2000, 2, 0.08, p); },
     tears: (t, p) => { for (let k = 0; k < 3; k++) pluck('zheng', freq(12 - k * 2), t + k * 0.7, { vol: 0.24, pan: p, bend: -2 }); }
+  };
+
+  /* 《琵琶行》里的曲段：诗怎么比，就怎么弹 */
+  const SONG = {
+    far: (t) => phrase('pipa', [[7, 0.5], [9, 0.5], [7, 0.9], [4, 1.2]], t, { vol: 0.14, pan: -0.5 }),                                   // 忽闻水上琵琶声
+    tune: (t) => { [0, 0.9, 1.6].forEach((d, i) => pluck('pipa', freq([2, 4, 2][i]), t + d, { vol: 0.36, bend: i === 2 ? -2 : 0 })); },   // 转轴拨弦三两声
+    rain: (t) => { tremolo('pipa', 0, t, 1.7, 0.3, -0.2); tremolo('pipa', 2, t + 0.6, 1.5, 0.28, 0.2); for (let k = 0; k < 14; k++) pluck('pipa', freq(-3 + (k % 4)), t + 0.2 + k * 0.13, { vol: 0.26 }); },   // 大弦嘈嘈如急雨
+    pearls: (t) => { [14, 9, 12, 7, 11, 5, 9, 4, 7, 2].forEach((n, k) => pluck('pipa', freq(n), t + k * 0.11 + (k % 2) * 0.02, { vol: k % 2 ? 0.3 : 0.2 })); },   // 大珠小珠落玉盘
+    oriole: (t) => phrase('pipa', [[11, 0.12], [12, 0.12], [11, 0.2], [14, 0.14], [12, 0.3], [9, 0.5]], t, { vol: 0.26, pan: 0.2 }),      // 间关莺语花底滑
+    spring: (t) => { [[4, 0], [2, 0.9], [1, 2.0], [0, 3.4]].forEach(([n, d]) => pluck('pipa', freq(n), t + d, { vol: 0.24, bend: -2 })); },   // 幽咽泉流冰下难
+    burst: (t) => { for (let k = 0; k < 4; k++) pluck('pipa', freq(k * 3), t + 1.3 + k * 0.012, { vol: 0.5 }); noiseSweep(t + 1.3, 0.7, 900, 3200, 700, 0.8, 0.2, 0); },   // 银瓶乍破水浆迸
+    riders: (t) => { for (let k = 0; k < 12; k++) for (let j = 0; j < 3; j++) pluck('pipa', freq(j * 2 + (k % 3)), t + k * 0.19 + j * 0.01, { vol: 0.34 }); },            // 铁骑突出刀枪鸣
+    tear: (t) => { for (let k = 0; k < 4; k++) pluck('pipa', freq(k * 2 + 2), t + 0.9 + k * 0.004, { vol: 0.6 }); noiseSweep(t + 0.9, 0.5, 2400, 7000, 1200, 1.4, 0.28, 0); },   // 四弦一声如裂帛
+    moon: (t) => { harmonic(freq(12), t, { vol: 0.2 }); harmonic(freq(7), t + 1.3, { vol: 0.14 }); },                                     // 唯见江心秋月白
+    youth: (t) => phrase('pipa', [[7, 0.2], [9, 0.2], [11, 0.2], [9, 0.2], [12, 0.4], [11, 0.2], [9, 0.2], [7, 0.5]], t, { vol: 0.28 }),  // 一曲红绡不知数
+    dream: (t) => phrase('xiao', [[7, 1.2], [9, 0.8], [7, 2.2]], t, { vol: 0.11, fall: -2 }),                                             // 夜深忽梦少年事
+    ape: (t) => { flute(freq(14), t, 1.4, { xiao: true, vol: 0.13, fall: -5 }); flute(freq(12), t + 1.7, 1.9, { xiao: true, vol: 0.11, fall: -7 }); },   // 猿哀鸣
+    flute: (t) => phrase('di', [[4, 0.3], [5, 0.2], [4, 0.5], [2, 0.3], [4, 0.9]], t, { vol: 0.11, vib: 0.03 }),                          // 山歌与村笛
+    urgent: (t) => { for (let k = 0; k < 28; k++) pluck('pipa', freq([7, 9, 7, 5][k % 4] + (k > 15 ? 2 : 0)), t + 2.8 * (1 - Math.pow(1 - k / 28, 1.6)), { vol: 0.2 + k * 0.008 }); },   // 却坐促弦弦转急
+    weep: (t) => phrase('xiao', [[4, 1.4], [2, 1.0], [0, 2.4]], t, { vol: 0.13, fall: -2 })                                               // 江州司马青衫湿
   };
 
   /* 世界里发生的事 → 声音 */
   const EVENT = {
+    song: (t, d) => { const f = SONG[d.name]; if (f) f(t); },
+    pearl: (t, d) => pluck('pipa', freq(d.big ? 9 : 14 + ((Math.random() * 4) | 0)), t, { vol: d.big ? 0.28 : 0.18, pan: R(-0.4, 0.4) }),
     raindrop: (t, d) => pluck('pipa', freq(11 + ((Math.random() * 9) | 0)), t, { vol: R(0.06, 0.17), pan: R(-0.9, 0.9) }),
     snowflake: (t) => bell(freq(16 + ((Math.random() * 6) | 0)), t, { qing: true, vol: 0.05, pan: R(-0.8, 0.8) }),
     thunder: (t, d) => { drum(t, { vol: 1, f: 58, pan: d.pan }); drum(t + 0.13, { vol: 0.6, f: 48, pan: d.pan }); noiseSweep(t, 3.2, 320, 130, 60, 0.5, 0.75, d.pan, 'lowpass'); },

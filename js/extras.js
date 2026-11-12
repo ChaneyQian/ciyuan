@@ -268,6 +268,148 @@
     }
   };
 
+  /* ================= 枫：霜后一树丹叶，时时飘落 ================= */
+  Kinds.maple = {
+    z: 58, max: 3, zone: 'side',
+    create(e, w) {
+      const r = e.rng;
+      e.by = Math.min(w.H + 10, e.y + 400); e.h = Math.max(300, e.by - e.y + 60);
+      e.lean = (e.x < w.W / 2 ? 1 : -1) * (0.1 + r() * 0.16); e.tk = 2; e.b = [];
+      for (let i = 0; i < 7; i++) {
+        const u = 0.36 + i * 0.1 + r() * 0.03, side = i % 2 ? 1 : -1, dabs = [];
+        for (let k = 0; k < 15; k++) { const a = r() * TAU, d = Math.sqrt(r()); dabs.push([Math.cos(a) * d, Math.sin(a) * d * 0.7, r() * TAU, 8 + r() * 7, r() < 0.32]); }
+        e.b.push({ u, a: -Math.PI / 2 + side * (0.55 + r() * 0.55), len: (120 + r() * 90) * (1.2 - u * 0.55), ph: r() * TAU, dabs });
+      }
+    },
+    update(e, dt, w) {
+      e.tk -= dt;
+      if (e.tk <= 0) { e.tk = 0.5 + Math.random() * 1.1; const b = e.b[(Math.random() * e.b.length) | 0]; if (b.tx != null) w.drift(b.tx + (Math.random() - 0.5) * 70, b.ty, 'leaf', Math.random() < 0.65 ? 'red' : 'orange'); }
+    },
+    draw(e, ctx, w) {
+      const g = ease(e.age / 3), sw = sway(w, e.seed % 7, 0.7), H = e.h * g;
+      const tx = e.x + e.lean * H + sw * 4, ty = e.by - H;
+      softDot(ctx, e.x, e.by - 30, 90, w.ink(0.1), w.ink(0));
+      mark(ctx, [e.x, e.by, e.x + e.lean * H * 0.2, e.by - H * 0.38, e.x + e.lean * H * 0.72, e.by - H * 0.74, tx, ty], (t) => 17 - 13 * t, w.ink(0.74));
+      const lg = ease((g - 0.45) / 0.55);
+      for (const b of e.b) {
+        const bx = lerp(e.x, tx, b.u * b.u * 0.6 + b.u * 0.4), by = e.by - H * b.u, a = b.a + sw * 0.03;
+        const ex = bx + Math.cos(a) * b.len * g, ey = by + Math.sin(a) * b.len * g * 0.8;
+        mark(ctx, [bx, by, (bx + ex) / 2, (by + ey) / 2 - 12, ex, ey], taper(5.5), w.ink(0.64));
+        b.tx = ex; b.ty = ey;
+        if (lg <= 0) continue;
+        const R = 62 * lg;
+        softDot(ctx, ex, ey, R * 1.5, w.col('red', 0.2), w.col('red', 0));
+        for (let pass = 0; pass < 2; pass++) {
+          ctx.fillStyle = pass ? w.col('orange', 0.66) : w.col('red', 0.68);
+          ctx.beginPath();
+          for (const d of b.dabs) {
+            if (d[4] !== !!pass) continue;
+            const x = ex + d[0] * R, y = ey + d[1] * R;
+            for (let j = -1; j <= 1; j++) leafPath(ctx, x, y, d[2] + j * 0.8 + sw * 0.04, d[3] * lg, 2.8, 0);     // 三裂的叶
+          }
+          ctx.fill();
+        }
+      }
+    }
+  };
+
+  /* ================= 酒：一坛两盏，酒气微温 ================= */
+  Kinds.wine = {
+    z: 64, max: 3, zone: 'ground',
+    create(e, w) { e.s = 1 + e.rng() * 0.25; e.ph = e.rng() * TAU; },
+    draw(e, ctx, w) {
+      const g = ease(e.age / 1.8), s = e.s * g;
+      if (s <= 0) return;
+      softDot(ctx, e.x, e.y + 10, 120 * g, 'rgba(255,190,110,' + (0.06 + 0.1 * w.nightK) * g + ')', 'rgba(255,190,110,0)');
+      ctx.save(); ctx.translate(e.x, e.y + 44); ctx.scale(s, s);
+      softDot(ctx, 4, -4, 74, w.ink(0.14), w.ink(0));
+      // 坛
+      ctx.beginPath(); ctx.moveTo(-14, -80); ctx.bezierCurveTo(-46, -68, -48, -14, -23, 0); ctx.lineTo(23, 0); ctx.bezierCurveTo(48, -14, 46, -68, 14, -80); ctx.closePath();
+      ctx.fillStyle = w.ink(0.6); ctx.fill();
+      softDot(ctx, -16, -48, 20, w.col('paper', 0.3), w.col('paper', 0));
+      mark(ctx, [-14, -80, -42, -52, -40, -18, -23, 0], swell(2.2), w.ink(0.7));
+      mark(ctx, [-15, -82, 0, -85, 15, -82], () => 6, w.ink(0.82));
+      ctx.fillStyle = w.col('red', 0.82); ctx.beginPath(); ctx.ellipse(0, -93, 14, 10, 0, 0, TAU); ctx.fill();           // 红布封口
+      for (let i = 0; i < 2; i++) mark(ctx, strand(10 - i * 20, -86, Math.PI / 2 + (i ? 0.4 : -0.4), 22, w.t * 2 + i, 2, 0), taper(3), w.col('red', 0.6));
+      ctx.save(); ctx.translate(0, -40); ctx.rotate(Math.PI / 4); ctx.fillStyle = w.col('red', 0.72); ctx.fillRect(-12, -12, 24, 24); ctx.restore();   // 斗方
+      // 两只盏
+      for (const [cx, cy, r] of [[56, -4, 13], [84, 2, 11]]) {
+        ctx.beginPath(); ctx.moveTo(cx - r, cy - r * 0.7); ctx.quadraticCurveTo(cx, cy + r * 0.9, cx + r, cy - r * 0.7); ctx.closePath();
+        ctx.fillStyle = w.col('white', 0.94); ctx.fill();
+        mark(ctx, [cx - r, cy - r * 0.7, cx, cy + r * 0.16, cx + r, cy - r * 0.7], swell(1.3), w.ink(0.5));
+        ctx.fillStyle = 'rgba(214,150,70,0.7)'; ctx.beginPath(); ctx.ellipse(cx, cy - r * 0.7, r * 0.82, r * 0.2, 0, 0, TAU); ctx.fill();
+      }
+      // 酒气
+      for (let i = 0; i < 3; i++) mark(ctx, strand(56 + i * 12, -16, -Math.PI / 2 + (i - 1) * 0.2, 46, w.t * 1.1 + i * 2 + e.ph, 7, 0.08), taper(2.4), w.ink(0.16));
+      ctx.restore();
+    }
+  };
+
+  /* ================= 泉：石隙里一线水，落下成潭 ================= */
+  Kinds.spring = {
+    z: 44, max: 2, zone: 'ground',
+    create(e, w) {
+      const r = e.rng;
+      e.rocks = [[-70, 130, 96, 0.56], [34, 150, 120, 0.46], [118, 90, 60, 0.6]].map((q) => ({ dx: q[0] + (r() - 0.5) * 16, w: q[1], h: q[2] * (0.85 + r() * 0.3), tone: q[3], sd: r() * 9 }));
+      e.tk = 0; w.dye(e.x - 30, e.y + 70, [0.04, 0, 0.12], 50);
+    },
+    update(e, dt, w) { e.tk -= dt; if (e.tk <= 0) { e.tk = 0.3; w.stir(e.x - 30, e.y + 74, -70, 16, 34); } },
+    draw(e, ctx, w) {
+      const g = ease(e.age / 2.4), base = e.y + 70;
+      for (const k of e.rocks) {
+        const x = e.x + k.dx, top = [];
+        for (let i = 0; i <= 8; i++) { const u = i / 8; top.push(x - k.w / 2 + u * k.w, base - k.h * g * Math.pow(Math.sin(Math.PI * u), 0.6) * (0.7 + 0.3 * noise1(u * 4 + k.sd))); }
+        ctx.beginPath(); ctx.moveTo(x - k.w / 2, base + 14); for (let i = 0; i <= 8; i++) ctx.lineTo(top[i * 2], top[i * 2 + 1]); ctx.lineTo(x + k.w / 2, base + 14); ctx.closePath();
+        const gr = ctx.createLinearGradient(0, base - k.h, 0, base + 14);
+        gr.addColorStop(0, w.ink(k.tone)); gr.addColorStop(1, w.ink(k.tone * 0.2));
+        ctx.fillStyle = gr; ctx.fill();
+        mark(ctx, top.slice(2, 16), swell(2.6), w.ink(0.56));
+      }
+      // 一线水：从两石之间下来，分几叠
+      const fg = ease((g - 0.5) / 0.5);
+      if (fg > 0) {
+        for (let i = 0; i < 3; i++) {
+          const x0 = e.x - 18 + i * 7, pp = [x0, base - 62, x0 - 6 - i * 3, base - 30, x0 - 20 - i * 6, base - 6, x0 - 30 - i * 9, base + 8];
+          mark(ctx, pp, (t) => (3.4 - i) * (0.6 + 0.4 * Math.sin(t * 9 - w.t * 7 + i)) * fg, w.col('white', 0.9));
+          if (!i) mark(ctx, pp, taper(1), w.col('blue', 0.4));
+        }
+        ctx.strokeStyle = w.ink(0.3 * fg); ctx.lineWidth = 1;
+        for (let j = 0; j < 3; j++) { const u = ((w.t * 0.5 + j / 3) % 1); ctx.globalAlpha *= 1; ctx.beginPath(); ctx.ellipse(e.x - 52, base + 12, 10 + u * 54, 2 + u * 9, 0, 0, TAU); ctx.strokeStyle = w.ink(0.34 * (1 - u) * fg); ctx.stroke(); }
+        softDot(ctx, e.x - 46, base + 6, 26, w.col('white', 0.5 * fg), w.col('white', 0));
+      }
+    }
+  };
+
+  /* ================= 冰：水面结了薄冰，慢慢裂开细纹 ================= */
+  Kinds.ice = {
+    z: 45, max: 2, zone: 'low',
+    create(e, w) {
+      const r = e.rng, sc = clamp(w.W / 1500, 0.5, 1);                 // 窄的画面上冰面小一些
+      e.f = [];
+      for (let i = 0; i < 6; i++) {
+        const rx = (100 + r() * 130) * sc, ry = (16 + r() * 14) * sc, n = 8, pts = [], cr = [];
+        for (let k = 0; k < n; k++) { const a = k / n * TAU, d = 0.8 + r() * 0.3; pts.push(Math.cos(a) * rx * d, Math.sin(a) * ry * d); }
+        for (let k = 0; k < 3; k++) { const a = r() * TAU, l = 0.5 + r() * 0.45; cr.push([0, 0, Math.cos(a) * rx * l * 0.5 + (r() - 0.5) * 16, Math.sin(a) * ry * l * 0.5, Math.cos(a + 0.3) * rx * l, Math.sin(a + 0.3) * ry * l]); }
+        e.f.push({ dx: ((i - 2.5) * 170 + (r() - 0.5) * 70) * sc, dy: ((i % 3) * 26 + r() * 10) * sc, pts, cr, d: i * 0.35, ph: r() * TAU });
+      }
+    },
+    draw(e, ctx, w) {
+      for (const f of e.f) {
+        const g = ease((e.age - f.d) / 2.6);
+        if (g <= 0) continue;
+        ctx.save(); ctx.translate(e.x + f.dx, e.y + f.dy + Math.sin(w.t * 0.6 + f.ph) * 1.2); ctx.scale(g, g);
+        ctx.beginPath(); for (let k = 0; k < f.pts.length; k += 2) k ? ctx.lineTo(f.pts[k], f.pts[k + 1]) : ctx.moveTo(f.pts[k], f.pts[k + 1]); ctx.closePath();
+        ctx.fillStyle = w.col('white', lerp(0.66, 0.5, w.nightK)); ctx.fill();
+        ctx.fillStyle = w.col('blue', 0.1); ctx.fill();
+        ctx.strokeStyle = w.ink(0.34); ctx.lineWidth = 1; ctx.stroke();
+        const cg = ease((e.age - f.d - 2.2) / 2.4);
+        if (cg > 0) for (const c of f.cr) mark(ctx, [c[0], c[1], lerp(c[0], c[2], Math.min(1, cg * 2)), lerp(c[1], c[3], Math.min(1, cg * 2)), lerp(c[2], c[4], cg), lerp(c[3], c[5], cg)], taper(1.5), w.ink(0.46));
+        softDot(ctx, -f.pts[0] * 0.3, -3, 8, w.col('white', 0.9), w.col('white', 0));
+        ctx.restore();
+      }
+    }
+  };
+
   /* ---------- 以下几样借手卷里的画法 ---------- */
   const prop = (name) => MS.Scroll && MS.Scroll.props[name];
   const env = (w) => ({ t: w.t, S: MS.Scroll });
