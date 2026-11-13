@@ -7,6 +7,9 @@
   if (!MS.GLYPHS) MS.GLYPHS = {};
 
   const $ = (id) => document.getElementById(id);
+  /* 浏览器缓存里的 index.html 可能比这份脚本老：新添的几块若不在，就地补上，免得整页停摆 */
+  if (!$('side')) document.body.insertAdjacentHTML('beforeend', '<div id="side"><button id="btn-undo" type="button">撤销</button><button id="btn-bake" type="button">固化</button><span id="lay-top" class="lay"></span><button id="lay-bg" type="button" class="lay"></button></div>');
+  if (!$('guide')) document.body.insertAdjacentHTML('beforeend', '<div id="guide"><svg id="guide-svg"></svg><button type="button" id="guide-ok">开始</button></div>');
   const inkCanvas = $('ink'), stage = $('stage'), ime = $('ime');
   const ctx = stage.getContext('2d');
   const fluid = new MS.Fluid(inkCanvas);
@@ -18,19 +21,20 @@
   const state = {
     W: 1, H: 1, dpr: 1,
     trace: false,                // 溯源：字形从楷书退回甲骨文（默认关）
-    hand: false,                 // 手写：在纸上写字，由程序判定
-    pinyin: false,               // 拼音：不靠系统输入法，直接敲拼音
-    sound: false, soundTouched: false, auto: false,
+    hand: false,                 // 造字（手写）：在纸上写字，由程序判定
+    pinyin: true,                // 拟声（拼音）：不靠系统输入法，直接敲拼音（默认开）
+    sound: false, wantSound: true, woke: false,   // 传音（声音）：默认开，但浏览器要等第一下手势才许出声
+    auto: false, wantAuto: true,                  // 自在：默认开——进来就看它自己画；你一动笔它就停
     ink: 0,                      // 0 墨 1 朱 2 青
     seen: new Set(),             // 已经完整溯过源的字
     px: -999, py: -999, down: false, lastMove: 0,
     verse: '', verseT: 0
   };
   const PIG = [[0.42, 0, 0], [0, 0.5, 0], [0, 0, 0.5]];
-  /* 三个开关记在本机，下次打开还是上次的样子 */
-  const PREFS = 'ciyuan.prefs';
-  try { const p = JSON.parse(localStorage.getItem(PREFS) || '{}'); for (const k of ['trace', 'hand', 'pinyin']) if (typeof p[k] === 'boolean') state[k] = p[k]; } catch (err) { /* 存不了就算了 */ }
-  function savePrefs() { try { localStorage.setItem(PREFS, JSON.stringify({ trace: state.trace, hand: state.hand, pinyin: state.pinyin })); } catch (err) { /* 同上 */ } }
+  /* 几个开关记在本机，下次打开还是上次的样子（默认值换过一轮，所以换了个名字存） */
+  const PREFS = 'ciyuan.prefs2', KEYS = ['trace', 'hand', 'pinyin', 'wantSound', 'wantAuto'];
+  try { const p = JSON.parse(localStorage.getItem(PREFS) || '{}'); for (const k of KEYS) if (typeof p[k] === 'boolean') state[k] = p[k]; } catch (err) { /* 存不了就算了 */ }
+  function savePrefs() { try { const o = {}; for (const k of KEYS) o[k] = state[k]; localStorage.setItem(PREFS, JSON.stringify(o)); } catch (err) { /* 同上 */ } }
 
   /* ---------- 尺寸 ---------- */
   function resize() {
@@ -60,13 +64,45 @@
       },
       onBloom(bx, by) {
         if (!def) return;
+        const before = snap();
         world.spawn(key, bx, by);
+        record(before);
         Audio.bloom(def.kind, pan);
         afterSpawn(key);
       }
     });
   }
   MS.commit = commit;
+
+  /* ---------- 撤销 ---------- */
+  /* 每做一件会改动画面的事（落字、清除、固化、调远近），先记下做之前的样子 */
+  const undo = [];
+  function snap() {
+    return { ents: new Set(world.ents), dying: new Set(world.ents.filter((e) => e.dying)), marks: world.ents.filter((e) => e.kind === 'mark'), season: world.season, night: world.night };
+  }
+  function record(b) {
+    const added = world.ents.filter((e) => !b.ents.has(e) && e.kind !== 'mark');
+    const gone = []; for (const e of b.ents) if (e.kind !== 'mark' && !b.dying.has(e) && (e.dying || world.ents.indexOf(e) < 0)) gone.push(e);
+    if (!added.length && !gone.length && b.season === world.season && b.night === world.night) return;
+    pushUndo({ added, gone, marks: b.marks, season: b.season, night: b.night });
+  }
+  function pushUndo(op) { undo.push(op); if (undo.length > 40) undo.shift(); refreshSide(); }
+  function doUndo() {
+    if (Scroll.active) return;
+    const op = undo.pop();
+    if (!op) return;
+    if (op.scale) { op.e.sc = op.from; world.resort(); }
+    else if (op.bake) { for (const e of op.bake) e.layer = 1; }
+    else {
+      for (const e of op.added) { e.dying = true; e.fade = Math.min(e.fade, 0.5); }
+      for (const e of op.gone) world.revive(e);
+      world.ents = world.ents.filter((e) => e.kind !== 'mark'); for (const m of op.marks) world.ents.unshift(m);
+      world.season = op.season; world.night = op.night;
+    }
+    if (sel && sel.dying) sel = null;
+    refreshDock(); refreshSide(); Audio.play('stage', { idx: 3 });
+  }
+  MS.undo = doUndo;
 
   function afterSpawn(key) {
     const present = world.present();
@@ -131,16 +167,29 @@
         b.dataset.tip = def.tone + '声' + (partners ? ' · 对 ' + partners : '');
         b.setAttribute('aria-label', ch + '，' + def.tone + '声' + (partners ? '，可对 ' + partners : ''));
         b.addEventListener('click', () => {
-          wake();
+          wake(); yieldAuto();
           const p = world.placeFor(ch);
           commit(ch, p.x, p.y);
           ime.focus({ preventScroll: true });
         });
+        b.addEventListener('contextmenu', (e) => { e.preventDefault(); wake(); wipe(ch); });   // 右键（触屏长按）：清掉它化出的东西
         buttons[ch] = b; grp.appendChild(b);
       }
       dock.appendChild(grp);
     }
   })();
+  /* 把某个字在画里化出的东西一次清掉；四时与夜则是把时令、夜色撤回去 */
+  function wipe(ch) {
+    const def = MS.CHARS[ch], before = snap();
+    const unmark = () => { world.ents = world.ents.filter((e) => !(e.kind === 'mark' && e.ch === ch)); };
+    if (def.kind === 'season') { if (world.season === ch) { world.season = ''; unmark(); } }
+    else if (def.kind === 'night') { if (world.night) { world.night = false; unmark(); } }
+    else if (def.kind !== 'day' && def.kind !== 'clear') world.removeChar(ch);
+    record(before);
+    if (sel && sel.dying) sel = null;
+    refreshDock(); Audio.play('stage', { idx: 4 });
+  }
+  MS.wipe = wipe;
   function refreshDock(last, present) {
     present = present || world.present();
     const want = new Set();
@@ -154,24 +203,26 @@
   /* ---------- 工具钮 ---------- */
   function press(btn, on) { btn.setAttribute('aria-pressed', on ? 'true' : 'false'); }
   function setSound(on) { state.sound = Audio.setEnabled(on); press($('btn-sound'), state.sound); }
-  /* 第一次动手时把声音打开（浏览器要求先有用户手势）；用户自己关过就不再自作主张 */
-  function wake() { if (!state.soundTouched) { state.soundTouched = true; setSound(true); } }
-  $('btn-sound').addEventListener('click', () => { state.soundTouched = true; setSound(!state.sound); });
+  /* 第一次动手时把声音打开（浏览器要求先有用户手势）；用户关过「传音」就不开 */
+  function wake() { if (!state.woke) { state.woke = true; if (state.wantSound) setSound(true); } }
+  $('btn-sound').addEventListener('click', () => { state.woke = true; state.wantSound = !state.sound; setSound(state.wantSound); savePrefs(); });
   $('btn-trace').addEventListener('click', () => { state.trace = !state.trace; applyModes(); });
   $('btn-hand').addEventListener('click', () => { state.hand = !state.hand; applyModes(); });
   $('btn-pinyin').addEventListener('click', () => { state.pinyin = !state.pinyin; applyModes(); ime.focus({ preventScroll: true }); });
   const touchOnly = !window.matchMedia('(hover: hover)').matches;
   function applyModes() {
     press($('btn-trace'), state.trace); press($('btn-hand'), state.hand); press($('btn-pinyin'), state.pinyin);
+    press($('btn-sound'), state.woke ? state.sound : state.wantSound);
     Hand.setEnabled(state.hand);
     if (!state.pinyin) pyClear();
     document.body.classList.toggle('hand', state.hand);
     // 纸边的提示跟着模式变
     const parts = [];
-    if (state.pinyin) parts.push('拼音已开：直接敲 shan、yue、long');
+    if (state.pinyin) parts.push('拟声已开：直接敲拼音 shan、yue、long');
     else if (!touchOnly) parts.push('键盘直接打字，字会活过来');
-    if (state.hand) parts.push('手写已开：在纸上写一个字，停笔即判');
+    if (state.hand) parts.push('造字已开：在纸上写一个字，停笔即判');
     else parts.push('点字落笔', '拖动落墨');
+    parts.push(touchOnly ? '长按字钮清除' : '右键字钮清除', '点物象后滚轮调远近');
     if (!touchOnly) parts.push('按住 Shift 泼水');
     const box = $('hint-mode'); box.textContent = '';
     for (const t of parts) { box.append(t); const dot = document.createElement('i'); dot.textContent = '·'; box.appendChild(dot); }
@@ -179,8 +230,55 @@
   }
   $('btn-auto').addEventListener('click', () => {
     wake();
-    if (Scroll.active) { Scroll.auto = !Scroll.auto; press($('btn-auto'), Scroll.auto); } else setAuto(!state.auto);
+    if (Scroll.active) { Scroll.auto = !Scroll.auto; press($('btn-auto'), Scroll.auto); }
+    else { setAuto(!state.auto); state.wantAuto = state.auto; savePrefs(); }
   });
+  /* 你一动笔，自在就让位（不改它「默认开」的设定，下次进来它还会自己画） */
+  function yieldAuto() { if (state.auto) setAuto(false); }
+
+  /* ---------- 左下角：撤销与图层 ---------- */
+  function refreshSide() {
+    $('btn-undo').disabled = !undo.length;
+    $('lay-top').textContent = '上层 ' + world.count(1);
+    $('lay-bg').textContent = '底层 ' + world.count(0) + (world.locked ? ' · 锁' : ' · 开');
+    press($('lay-bg'), world.locked);
+    $('btn-bake').disabled = !world.count(1);
+  }
+  $('btn-undo').addEventListener('click', () => { wake(); doUndo(); });
+  $('btn-bake').addEventListener('click', () => {            // 固化：上层的物象压进底层
+    wake();
+    const list = world.bake();
+    if (list.length) { pushUndo({ bake: list }); Audio.play('stage', { idx: 2 }); }
+    if (sel && !world.pickable(sel)) sel = null;
+    refreshSide();
+  });
+  $('lay-bg').addEventListener('click', () => { world.locked = !world.locked; if (sel && !world.pickable(sel)) sel = null; refreshSide(); });
+
+  /* ---------- 点选一个物象，滚轮调它的远近 ---------- */
+  let sel = null, pick = null, sideT = 0;
+  function drawSel() {
+    if (!sel) return;
+    if (!world.pickable(sel) || world.ents.indexOf(sel) < 0) { sel = null; return; }
+    const c = world.centerOf(sel), r = 40 * Math.sqrt(sel.sc || 1) + 6, night = world.nightK > 0.5;
+    ctx.save();
+    ctx.strokeStyle = night ? 'rgba(236,88,68,0.9)' : 'rgba(176,36,30,0.78)'; ctx.lineWidth = 1.4;
+    ctx.setLineDash([7, 9]); ctx.lineDashOffset = -world.t * 16;
+    ctx.beginPath(); ctx.arc(c[0], c[1], r, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = '12px ' + MS.FONT_TEXT; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillStyle = night ? 'rgba(236,88,68,0.95)' : 'rgba(176,36,30,0.9)';
+    ctx.fillText((sel.ch || '') + ' · 滚轮调远近 ' + Math.round((sel.sc || 1) * 100) + '%', c[0], Math.min(state.H - 20, c[1] + r + 7));
+    ctx.restore();
+  }
+  function zoomSel(d) {
+    const from = sel.sc || 1, to = clamp(from * Math.exp(-d * 0.0012), 0.3, 2.6), last = undo[undo.length - 1], now = performance.now();
+    if (to === from) return;
+    if (last && last.scale && last.e === sel && now - last.at < 1200) last.at = now;       // 一口气滚的算一步
+    else pushUndo({ scale: true, e: sel, from, at: now });
+    sel.sc = to; world.resort();
+  }
+  MS.select = (e) => { sel = e || null; };
+  MS.zoom = (d) => { if (sel) zoomSel(d); };
 
   /* ---------- 人间词话：手卷 ---------- */
   const volsEl = $('vols');
@@ -197,7 +295,7 @@
   });
   window.addEventListener('click', () => volsEl.classList.remove('show'));
   function openScroll(id) {
-    wake(); setAuto(false); Eggs.stop(true);
+    wake(); setAuto(false); Eggs.stop(true); sel = null;
     if (!Scroll.open(id, fluid, state.W, state.H)) return;
     Hand.setEnabled(true); pyClear(); Glyphs.list.length = 0;
     $('btn-scroll').textContent = '收卷'; press($('btn-scroll'), true); press($('btn-auto'), false);
@@ -239,7 +337,96 @@
     try { localStorage.setItem(HINT, '1'); } catch (err) { /* 同上 */ }
   }
   hintEl.addEventListener('pointerdown', (e) => { e.stopPropagation(); hideHint(); });
-  window.addEventListener('wheel', (e) => { if (Scroll.active) { e.preventDefault(); hideHint(); Scroll.wheel((Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY) * (e.deltaMode ? 30 : 1)); } }, { passive: false });
+  window.addEventListener('wheel', (e) => {
+    const d = (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY) * (e.deltaMode ? 30 : 1);
+    if (Scroll.active) { e.preventDefault(); hideHint(); Scroll.wheel(d); }
+    else if (sel && !guideOn) { e.preventDefault(); zoomSel(d); }                         // 首页：选中了一个物象，滚轮推远拉近
+  }, { passive: false });
+
+  /* 第一次进来蒙一层引导：蒙版上给真实的按键开窗，每个键拉一条引线到一句说明。只出现一次（记在本机） */
+  const guideEl = $('guide'), guideSvg = $('guide-svg'), GUIDE = 'ciyuan.guide';
+  const TIPS = {
+    'btn-scroll': '把一篇古文演成手卷，补上缺的字，画才往下走',
+    'btn-auto': '它自己取《声律启蒙》写成画；你一动笔它就停',
+    'btn-trace': '字先从楷书退回甲骨文，再化形',
+    'btn-hand': '手写：在纸上写一个字，停笔即认',
+    'btn-pinyin': '拼音：直接敲 shan、yue、long 出字',
+    'btn-sound': '声音：古琴、古筝、琵琶、笛箫',
+    'btn-shot': '存一张画'
+  };
+  let guideOn = true;
+  try { guideOn = localStorage.getItem(GUIDE) !== '1'; } catch (err) { /* 存不了就每次都引导一下 */ }
+  function layoutGuide() {
+    if (!guideOn) return;
+    const W = state.W, H = state.H, NS = 'http://www.w3.org/2000/svg';
+    const el = (tag, attrs, text) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); if (text != null) n.textContent = text; return n; };
+    const box = (node, pad) => { const r = node.getBoundingClientRect(); return { x: r.left - pad, y: r.top - pad, w: r.width + pad * 2, h: r.height + pad * 2 }; };
+    const rr = (b, r) => 'M' + (b.x + r) + ' ' + b.y + 'h' + (b.w - 2 * r) + 'a' + r + ' ' + r + ' 0 0 1 ' + r + ' ' + r + 'v' + (b.h - 2 * r) + 'a' + r + ' ' + r + ' 0 0 1 ' + -r + ' ' + r + 'h' + -(b.w - 2 * r) + 'a' + r + ' ' + r + ' 0 0 1 ' + -r + ' ' + -r + 'v' + -(b.h - 2 * r) + 'a' + r + ' ' + r + ' 0 0 1 ' + r + ' ' + -r + 'z';
+    guideSvg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    guideSvg.textContent = '';
+    const tools = box(document.querySelector('.tools'), 9), dockB = box($('chars'), 9), side = box($('side'), 9);
+    const holes = [tools, dockB, side].filter((b) => b.w > 30 && b.h > 20);
+    guideSvg.appendChild(el('path', { class: 'veil', 'fill-rule': 'evenodd', d: 'M0 0H' + W + 'V' + H + 'H0Z' + holes.map((b) => rr(b, 14)).join('') }));
+    for (const b of holes) guideSvg.appendChild(el('path', { class: 'frame', d: rr(b, 14) }));
+    const lead = (pts) => { guideSvg.appendChild(el('polyline', { class: 'lead', points: pts.join(' ') })); guideSvg.appendChild(el('circle', { class: 'dot', cx: pts[0], cy: pts[1], r: 2.8 })); };
+    const say = (x, y, anchor, name, text) => {
+      const t = el('text', { x, y, 'text-anchor': anchor, 'dominant-baseline': 'middle' });
+      if (name) { const k = el('tspan', { class: 'k' }, name + '　'); t.appendChild(k); }
+      t.appendChild(document.createTextNode(text));
+      guideSvg.appendChild(t);
+      return t;
+    };
+    // 工具钮：分三区（看卷 · 落字的法子 · 声与影），每区一块淡底、一个小题。
+    // 说明不排成齐平的一列，而是各自贴着自己那条引线，自左上往右下错落成阶梯；引线互不相交
+    const narrow = W < 760, row = narrow ? 21 : 26;
+    const rectOf = (id) => { const b = $(id); return b && b.offsetParent ? b.getBoundingClientRect() : null; };
+    let y = tools.y + tools.h + (narrow ? 8 : 12);
+    for (const [cap, ids] of [['看卷', ['btn-scroll']], ['落字的法子', ['btn-auto', 'btn-trace', 'btn-hand', 'btn-pinyin']], ['声与影', ['btn-sound', 'btn-shot']]]) {
+      const before = guideSvg.lastChild, texts = [], yCap = y + row * 0.62;
+      y += row * 1.5;
+      for (const id of ids) {
+        const r = rectOf(id); if (!r) continue;
+        const bx = r.left + r.width / 2, tip = narrow ? TIPS[id].replace(/[；，].*$/, '') : TIPS[id];
+        const left = bx > tip.length * (narrow ? 12 : 14) + 20;             // 左边放得下就往左写，放不下往右
+        lead([bx, r.bottom + 3, bx, y, bx + (left ? -7 : 7), y]);
+        texts.push(say(bx + (left ? -12 : 12), y, left ? 'end' : 'start', '', tip));
+        y += row;
+      }
+      if (!texts.length) continue;
+      let x0 = 1e9, x1 = -1e9;
+      for (const t of texts) { const b = t.getBBox(); x0 = Math.min(x0, b.x); x1 = Math.max(x1, b.x + b.width); }
+      const zone = { x: x0 - 14, y: yCap - row * 0.62, w: x1 - x0 + 28, h: y - row * 0.42 - (yCap - row * 0.62) };
+      guideSvg.insertBefore(el('path', { class: 'zone', d: rr(zone, 10) }), before.nextSibling);
+      guideSvg.appendChild(el('text', { class: 'cap', x: x0, y: yCap, 'dominant-baseline': 'middle' }, cap));
+      y += narrow ? 8 : 12;
+    }
+    // 字钮
+    const dx = dockB.x + dockB.w / 2, dy = dockB.y - 34;
+    lead([dx, dockB.y - 3, dx, dy + 12]);
+    say(dx, dy, 'middle', narrow ? '' : '字钮', narrow ? '点字落笔 · 长按清掉这个字的物象' : '点一下落字 · 右键清掉这个字化出的东西 · 最后一组「四时」改的是整幅画');
+    // 左下角：撤销与图层
+    if (side.w > 30) {
+      const sx = side.x + side.w / 2, sy = Math.min(side.y, dockB.y) - (narrow ? 22 : 64);
+      lead([sx, side.y - 3, sx, sy + 12]);
+      say(Math.max(12, side.x + 4), sy, 'start', '', narrow ? '撤销 · 固化' : '撤销（Ctrl+Z）· 固化：把上层的物象压进底层锁住');
+    }
+    // 画面：点选物象，滚轮调远近
+    const cx = W * (narrow ? 0.2 : 0.16), cy = Math.min(H * 0.56, dockB.y - 150);
+    guideSvg.appendChild(el('circle', { class: 'ring', cx, cy, r: 30 }));
+    lead([cx + 30, cy, cx + 58, cy]);
+    say(cx + 64, cy, 'start', '', narrow ? '点一下物象选中，再滚轮调远近' : '画里的东西：点一下选中，滚轮推远拉近');
+  }
+  if (guideOn) { guideEl.classList.add('show'); layoutGuide(); setTimeout(layoutGuide, 400); setTimeout(layoutGuide, 1800); }
+  window.addEventListener('resize', layoutGuide);
+  function closeGuide() {
+    if (!guideOn) return;
+    guideOn = false; guideEl.classList.remove('show');
+    try { localStorage.setItem(GUIDE, '1'); } catch (err) { /* 同上 */ }
+    wake();                                               // 关蒙版这一下就是手势：声音从这里开始
+    if (state.wantAuto && !Scroll.active) { setAuto(true); auto.timer = 1.4; }
+    ime.focus({ preventScroll: true });
+  }
+  guideEl.addEventListener('click', closeGuide);          // 点哪儿都行
   $('btn-shot').addEventListener('click', snapshot);
   document.querySelectorAll('.hint b').forEach((b) => b.addEventListener('click', () => setInk(+b.dataset.ink)));
   function setInk(i) {
@@ -274,6 +461,7 @@
 
   /* ---------- 留影 ---------- */
   function snapshot() {
+    if (sel && !Scroll.active) { const keep = sel; sel = null; tick(0.001); sel = keep; }   // 别把选中的圈拍进去
     compose().toBlob((blob) => {
       if (!blob) return;
       const a = document.createElement('a'), d = new Date(), p = (n) => String(n).padStart(2, '0');
@@ -321,14 +509,22 @@
     const sm = Scroll.active ? Scroll.pointerDown(e.clientX, e.clientY, e.pointerType === 'touch') : '';
     state.noInk = sm === 'pan' || sm === 'write';
     state.writing = sm === 'write' || (state.hand && !Scroll.active);
-    if (sm === 'pan') { /* 拖的是卷子，不落墨 */ }
-    else if (e.shiftKey && !Scroll.active) splash(e.clientX, e.clientY);
-    else if (state.writing) Hand.down(e.clientX, e.clientY);
-    else {
-      fluid.splat(e.clientX, e.clientY, 0, 0, PIG[state.ink], 15);
-      Audio.play('ink', { i: Math.round((1 - e.clientY / state.H) * 9), pan: (e.clientX / state.W * 2 - 1) * 0.7 });
-    }
+    // 首页：按在一个物象上，先不落墨——抬手时还没拖开，就是点选它
+    pick = !Scroll.active && !e.shiftKey && e.button === 0 ? world.hit(e.clientX, e.clientY) : null;
+    state.sx = e.clientX; state.sy = e.clientY;
+    if (pick) return;
+    if (!Scroll.active && !e.shiftKey) sel = null;         // 点在空处：放开选中的
+    firstTouch(e.clientX, e.clientY, sm, e.shiftKey);
   });
+  function firstTouch(x, y, sm, shift) {
+    if (sm === 'pan') { /* 拖的是卷子，不落墨 */ }
+    else if (shift && !Scroll.active) splash(x, y);
+    else if (state.writing) Hand.down(x, y);
+    else {
+      fluid.splat(x, y, 0, 0, PIG[state.ink], 15);
+      Audio.play('ink', { i: Math.round((1 - y / state.H) * 9), pan: (x / state.W * 2 - 1) * 0.7 });
+    }
+  }
   function splash(x, y) {
     fluid.wash(x, y, 110, 0.72);
     for (let a = 0; a < 8; a++) fluid.splat(x, y, Math.cos(a * 0.785) * 420, Math.sin(a * 0.785) * 420, null, 70);
@@ -343,6 +539,10 @@
     P.x = x; P.y = y; P.vx = vx; P.vy = vy; P.moved = 0;
     if (!ime.matches(':focus') || !composing) moveIme(x, y);
     if (Scroll.active) Scroll.pointerMove(x, y);
+    if (pick && state.down) {                              // 按在物象上却拖开了：那是落笔，不是点选
+      if (Math.hypot(x - state.sx, y - state.sy) < 7) { lastX = x; lastY = y; lastT = t; return; }
+      pick = null; firstTouch(state.sx, state.sy, '', false);
+    }
     if (state.down && state.writing) Hand.move(x, y);
     else if (state.down && state.noInk) { /* 拖卷 */ }
     else if (state.down) {
@@ -362,6 +562,8 @@
     lastX = x; lastY = y; lastT = t;
   });
   const up = () => {
+    if (pick && state.down) { sel = sel === pick ? null : pick; pick = null; Audio.play('stage', { idx: 1 }); state.down = false; state.noInk = false; state.writing = false; return; }
+    pick = null;
     const traced = Scroll.active && Scroll.pointerUp();
     if (traced) Hand.cancel(); else Hand.up();          // 这一笔是在描古字：不必再当手写去认
     state.down = false; state.noInk = false; state.writing = false;
@@ -370,6 +572,7 @@
   Hand.onCommit = (ch, cx, cy, pts) => {
     wake();
     if (Scroll.active) { if (!Scroll.answer(ch, 'hand', pts)) Hand.onReject(Hand.strokes.map((s) => s.p)); return; }
+    yieldAuto();
     commit(ch, cx, cy, undefined, pts);
   };
   Hand.onReject = (strokes) => {            // 认不出：手迹化成真的墨
@@ -383,7 +586,7 @@
   /* ---------- 字：键盘与输入法 ---------- */
   let composing = false;
   const isHan = (c) => /[㐀-鿿豈-﫿]/.test(c);
-  /* 内置拼音：只认 44 个能活的字。字母进缓冲，空格 / 数字选字，整拼唯一时自动落字 */
+  /* 拟声（内置拼音）：只认首页能活的字。字母进缓冲，空格 / 数字选字，整拼唯一时自动落字 */
   const py = { buf: '', list: [], timer: 0, x: 0, y: 0 }, pyEl = $('py');
   function pyRender() {
     if (!py.buf) { pyEl.className = ''; return; }
@@ -410,7 +613,7 @@
   function pyPick(i) {
     const ch = py.list[i], x = py.x, y = py.y;
     if (!ch) return;
-    pyClear(); wake(); commit(ch, x, y);
+    pyClear(); wake(); yieldAuto(); commit(ch, x, y);
   }
   function typed(text) {
     if (Scroll.active) return;                     // 看卷的时候不落字
@@ -432,7 +635,7 @@
       setTimeout(((ch, xx) => () => commit(ch, xx, y0))(c, x), n * 420);
       n++;
     }
-    if (n) wake();
+    if (n) { wake(); yieldAuto(); }
   }
   ime.addEventListener('compositionstart', () => { composing = true; });
   ime.addEventListener('compositionend', (e) => { composing = false; typed(e.data || ime.value); ime.value = ''; });
@@ -441,7 +644,13 @@
     typed(ime.value); ime.value = '';
   });
   window.addEventListener('keydown', (e) => {
+    if (guideOn) { closeGuide(); if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); return; } }
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === 'z' || e.key === 'Z') && !Scroll.active) { e.preventDefault(); doUndo(); return; }   // 撤销
     if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (!Scroll.active && sel && !py.buf) {
+      if (e.key === 'Escape') { sel = null; return; }
+      if (e.key === 'Delete') { const before = snap(); sel.dying = true; sel = null; record(before); refreshDock(); e.preventDefault(); return; }
+    }
     if (Scroll.active) { hideHint(); if (Scroll.key(e)) { e.preventDefault(); press($('btn-auto'), Scroll.auto); } return; }
     if (py.buf && !composing) {
       if (e.key === 'Backspace') { e.preventDefault(); pySet(py.buf.slice(0, -1)); return; }
@@ -507,8 +716,10 @@
     ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
     ctx.clearRect(0, 0, state.W, state.H);
     world.draw(ctx);
+    drawSel();
     Hand.draw(ctx, world);
     Glyphs.draw(ctx);
+    if ((sideT -= dt) <= 0) { sideT = 0.5; refreshSide(); }
     // 世界里的事 → 声
     if (world.events.length) {
       for (const ev of world.events) {
@@ -536,6 +747,7 @@
     Glyphs.refreshFonts(); Hand.refresh();
     if (state.W > 200 && state.H > 200) intro();
     else window.addEventListener('resize', function once() { if (state.W > 200 && state.H > 200) { window.removeEventListener('resize', once); intro(); } });
+    if (state.wantAuto && !guideOn) { setAuto(true); auto.timer = 3.4; }      // 默认自在：题名化开之后，它就自己画起来
   };
   if (document.fonts && document.fonts.load) {
     Promise.race([document.fonts.load('30px "Ma Shan Zheng"', '词源'), new Promise((r) => setTimeout(r, 1200))]).then(start, start);

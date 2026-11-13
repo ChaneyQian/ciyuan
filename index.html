@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;600&display=swap" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=11eeef1c">
 </head>
 <body>
   <canvas id="ink" aria-hidden="true"></canvas>
@@ -22,13 +22,13 @@
   </header>
 
   <nav class="tools" aria-label="工具">
-    <button id="btn-scroll" type="button" aria-pressed="false" aria-haspopup="true" title="人间词话：把一篇古文演成一幅手卷">词话</button>
-    <button id="btn-auto" type="button" aria-pressed="false" title="自在：让《声律启蒙》自己写一阕">自在</button>
-    <button id="btn-trace" type="button" aria-pressed="false" title="溯源：字形从楷书倒退回甲骨文（默认关）">溯源</button>
-    <button id="btn-hand" type="button" aria-pressed="false" title="手写：在纸上写一个字，停笔后由程序判定">手写</button>
-    <button id="btn-pinyin" type="button" aria-pressed="false" title="拼音：不用系统输入法，直接敲拼音出字">拼音</button>
-    <button id="btn-sound" type="button" aria-pressed="false" title="有声：古琴、古筝、琵琶、笛箫、编钟">有声</button>
-    <button id="btn-shot" type="button" title="留影：存一张画">留影</button>
+    <button id="btn-scroll" type="button" aria-pressed="false" aria-haspopup="true" data-tip="古文演成手卷" aria-label="词话：把一篇古文演成一幅手卷">词话</button>
+    <button id="btn-auto" type="button" aria-pressed="false" data-tip="它自己写成画" aria-label="自在：让《声律启蒙》自己写一阕，你一动笔它就停">自在</button>
+    <button id="btn-trace" type="button" aria-pressed="false" data-tip="字形退回甲骨文" aria-label="溯源：字形从楷书倒退回甲骨文，再化形">溯源</button>
+    <button id="btn-hand" type="button" aria-pressed="false" data-tip="手写一个字" aria-label="造字（手写）：在纸上写一个字，停笔后由程序判定">造字</button>
+    <button id="btn-pinyin" type="button" aria-pressed="false" data-tip="敲拼音出字" aria-label="拟声（拼音）：不用系统输入法，直接敲拼音出字">拟声</button>
+    <button id="btn-sound" type="button" aria-pressed="false" data-tip="开 / 关声音" aria-label="传音（声音）：古琴、古筝、琵琶、笛箫、编钟">传音</button>
+    <button id="btn-shot" type="button" data-tip="存一张画" aria-label="留影：存一张画">留影</button>
   </nav>
 
   <aside class="verse" id="verse" aria-live="polite"></aside>
@@ -38,6 +38,20 @@
     <div class="chars" id="chars" role="toolbar" aria-label="可以活过来的字"></div>
     <p class="hint"><span id="hint-mode"></span><b data-ink="0" class="on">1 墨</b> <b data-ink="1">2 朱</b> <b data-ink="2">3 青</b></p>
   </footer>
+
+  <!-- 左下角：撤销与图层 -->
+  <div id="side" aria-label="撤销与图层">
+    <button id="btn-undo" type="button" data-tip="撤销上一步（Ctrl+Z）" aria-label="撤销上一步">撤销</button>
+    <button id="btn-bake" type="button" data-tip="把上层的物象压进底层" aria-label="固化：把上层的物象压进底层">固化</button>
+    <span id="lay-top" class="lay" title="上层：新落的字都在这一层，可以点选、清除、撤销"></span>
+    <button id="lay-bg" type="button" class="lay" aria-pressed="true" data-tip="底层锁着：清不掉、选不中。点一下开锁" aria-label="底层：固化了的物象；点一下切换锁定"></button>
+  </div>
+
+  <!-- 首次进入的引导：蒙版上给真实的按键开窗，每个键拉一条引线到一句说明。只出现一次 -->
+  <div id="guide" role="dialog" aria-label="怎么玩：每个按键的功能">
+    <svg id="guide-svg" aria-hidden="true"></svg>
+    <button type="button" id="guide-ok">开始</button>
+  </div>
 
   <div id="vols" role="menu" aria-label="人间词话 · 选一卷"></div>
   <div id="shint" role="dialog" aria-label="怎么看这卷画">
@@ -54,27 +68,27 @@
   <input id="ime" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="在此输入汉字" tabindex="-1">
   <noscript><p class="noscript">词源需要 JavaScript 与 WebGL。</p></noscript>
 
-  <script src="js/shenglv-data.js"></script>
-  <script src="js/luoshen-data.js"></script>
-  <script src="js/pipa-data.js"></script>
-  <script src="js/chunjiang-data.js"></script>
-  <script src="js/glyph-data.js"></script>
-  <script src="js/fluid.js"></script>
-  <script src="js/world.js"></script>
-  <script src="js/flora.js"></script>
-  <script src="js/fauna.js"></script>
-  <script src="js/things.js"></script>
-  <script src="js/extras.js"></script>
-  <script src="js/wanxiang.js"></script>
-  <script src="js/lexicon.js"></script>
-  <script src="js/glyph.js"></script>
-  <script src="js/hand.js"></script>
-  <script src="js/audio.js"></script>
-  <script src="js/scroll.js"></script>
-  <script src="js/luoshen.js"></script>
-  <script src="js/pipa.js"></script>
-  <script src="js/chunjiang.js"></script>
-  <script src="js/eggs.js"></script>
-  <script src="js/main.js"></script>
+  <script src="js/shenglv-data.js?v=275bfe87"></script>
+  <script src="js/luoshen-data.js?v=2976c10c"></script>
+  <script src="js/pipa-data.js?v=7a8105b0"></script>
+  <script src="js/chunjiang-data.js?v=b7980ba3"></script>
+  <script src="js/glyph-data.js?v=0286c410"></script>
+  <script src="js/fluid.js?v=72cf3095"></script>
+  <script src="js/world.js?v=3e308f87"></script>
+  <script src="js/flora.js?v=6ab6ee6e"></script>
+  <script src="js/fauna.js?v=2e4459ff"></script>
+  <script src="js/things.js?v=8179031e"></script>
+  <script src="js/extras.js?v=ac067b6c"></script>
+  <script src="js/wanxiang.js?v=5320e344"></script>
+  <script src="js/lexicon.js?v=be1dd4b6"></script>
+  <script src="js/glyph.js?v=0ce40cee"></script>
+  <script src="js/hand.js?v=f377a0f7"></script>
+  <script src="js/audio.js?v=0b719bcc"></script>
+  <script src="js/scroll.js?v=415c3196"></script>
+  <script src="js/luoshen.js?v=772ae450"></script>
+  <script src="js/pipa.js?v=0d6caae2"></script>
+  <script src="js/chunjiang.js?v=6dac43b8"></script>
+  <script src="js/eggs.js?v=6490e944"></script>
+  <script src="js/main.js?v=03cfc87a"></script>
 </body>
 </html>

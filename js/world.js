@@ -129,6 +129,7 @@
     this.flowerSpots = [];
     this.uid = 1;
     this._ambT = 0;
+    this.locked = true;        // 底层（layer 0，固化了的物象）锁着：清不掉、选不中、不占名额
   }
   World.prototype.resize = function (W, H) { this.W = W; this.H = H; };
 
@@ -177,17 +178,17 @@
     if (!K) return null;
     if (def.kind === 'sun' && this.night) { this.night = false; this._mark('昼'); this.emit('day'); }   // 日出则昼
     // 同类过多：最老的淡出
-    const same = this.ents.filter((e) => e.kind === def.kind && !e.dying);
+    const same = this.ents.filter((e) => e.kind === def.kind && !e.dying && e.layer !== 0);   // 底层固化了的不算数，也不会被挤掉
     if (K.single && same.length) {
       if (K.respawn) K.respawn(same[0], x, y, this);
       else same.forEach((e) => (e.dying = true));
       if (K.respawn) return same[0];
     } else if (K.max && same.length >= K.max) same[0].dying = true;
-    const e = { id: this.uid++, kind: def.kind, ch, x, y, age: 0, fade: 1, life: K.life || Infinity, seed: (Math.random() * 1e9) | 0, z: K.z || 50 };
+    const e = { id: this.uid++, kind: def.kind, ch, x, y, age: 0, fade: 1, life: K.life || Infinity, seed: (Math.random() * 1e9) | 0, z: K.z || 50, layer: 1, sc: 1 };
     e.rng = mulberry(e.seed);
     K.create(e, this);
     this.ents.push(e);
-    this.ents.sort((a, b) => a.z - b.z);
+    this.resort();
     return e;
   };
   /* 记下一个「无形」的字（四时、昼夜），让诗句检索知道它在场 */
@@ -205,8 +206,9 @@
   World.prototype.has = function (kind) { return this.ents.some((e) => e.kind === kind && !e.dying); };
   World.prototype.find = function (kind) { return this.ents.filter((e) => e.kind === kind && !e.dying); };
 
+  /* 万象归于空。底层锁着时只清上层；时令与昼夜总是复原 */
   World.prototype.clear = function () {
-    for (const e of this.ents) e.dying = true;
+    for (const e of this.ents) if (!(this.locked && e.layer === 0)) e.dying = true;
     this.ents = this.ents.filter((e) => e.kind !== 'mark');
     this.season = ''; this.night = false; this.gust = 0;
     this.clearing = 2.2;
@@ -290,11 +292,20 @@
   };
 
   World.prototype.draw = function (ctx) {
-    for (const e of this.ents) {
+    // 先底层、后上层；各自按远近与类别的次序
+    for (let pass = 0; pass < 2; pass++) for (const e of this.ents) {
+      if ((e.layer === 0) !== (pass === 0)) continue;
       const K = MS.Kinds[e.kind];
       if (!K || !K.draw) continue;
       ctx.save();
-      ctx.globalAlpha = clamp(e.fade, 0, 1);
+      let al = clamp(e.fade, 0, 1);
+      const sc = e.sc || 1;
+      if (sc !== 1) {                                   // 远近：绕着它的立足点缩放；推远了墨色也淡一些
+        const a = this.anchorOf(e);
+        ctx.translate(a[0], a[1]); ctx.scale(sc, sc); ctx.translate(-a[0], -a[1]);
+        if (sc < 1) al *= 0.55 + 0.45 * clamp((sc - 0.3) / 0.7, 0, 1);
+      }
+      ctx.globalAlpha = al;
       K.draw(e, ctx, this);
       ctx.restore();
     }
@@ -318,6 +329,80 @@
       ctx.restore();
     }
   };
+
+  /* ---------- 图层、远近、点选 ---------- */
+  /* 画的次序：类别的 z 为主，远近为辅（推远的退到同类之后） */
+  World.prototype.resort = function () {
+    const key = (e) => e.z + ((e.sc || 1) - 1) * 8;
+    this.ents.sort((a, b) => key(a) - key(b));
+  };
+  /* 一个灵的立足点：缩放绕着它 */
+  World.prototype.anchorOf = function (e) {
+    const K = MS.Kinds[e.kind] || {}, z = K.zone;
+    if (K.anchor) return K.anchor(e, this);
+    if (z === 'side') return [e.x, this.H];                                   // 从纸底长上来的树
+    if (z === 'edge') return [e.x > this.W / 2 ? this.W : 0, e.y + 90];        // 从纸边探进来的枝
+    if (e.kind === 'mountain') return [e.x, e.y + (e.mh || 200) * 0.62 + 40];
+    if (z === 'ground' || z === 'low' || z === 'land') return [e.x, e.y + 60];
+    return [e.x, e.y];
+  };
+  /* 它名下会动的那些点（鸟群、鱼群、花位……）：凡是「一组带 x、y 的东西」都算 */
+  World.prototype.membersOf = function (e) {
+    const out = [];
+    for (const k in e) { const v = e[k]; if (Array.isArray(v) && v.length && v[0] && typeof v[0].x === 'number' && typeof v[0].y === 'number') for (const m of v) out.push(m); }
+    return out;
+  };
+  const NOPICK = { rain: 1, snow: 1, wind: 1, thunder: 1, frost: 1, stars: 1, glow: 1, mark: 1, egg: 1, light: 1, tears: 1, sword: 1, notes: 1 };   // 铺满全幅的天象、转瞬即逝的，不能点选
+  World.prototype.pickable = function (e) { return !e.dying && !NOPICK[e.kind] && !(this.locked && e.layer === 0) && !!MS.Kinds[e.kind]; };
+  /* 屏上一点落在哪个灵身上（上面的优先）。没有就返回 null */
+  World.prototype.hit = function (x, y) {
+    for (let pass = 1; pass >= 0; pass--) for (let i = this.ents.length - 1; i >= 0; i--) {
+      const e = this.ents[i];
+      if ((e.layer === 0) !== (pass === 0) || !this.pickable(e)) continue;
+      const sc = e.sc || 1, a = this.anchorOf(e), qx = a[0] + (x - a[0]) / sc, qy = a[1] + (y - a[1]) / sc;
+      const z = (MS.Kinds[e.kind] || {}).zone, R = 58 / Math.sqrt(sc);
+      let ok = false;
+      for (const m of this.membersOf(e)) if (Math.hypot(qx - m.x, qy - m.y) < R) { ok = true; break; }
+      if (!ok) {
+        if (z === 'side') ok = Math.abs(qx - e.x) < 120 && qy > e.y - 110;
+        else if (z === 'edge') {
+          const ex = e.x > this.W / 2 ? this.W : 0, ey = e.y + 90, dx = e.x - ex, dy = e.y - ey;
+          const u = clamp(((qx - ex) * dx + (qy - ey) * dy) / (dx * dx + dy * dy || 1), 0, 1);
+          ok = Math.hypot(qx - ex - dx * u, qy - ey - dy * u) < 80;
+        } else if (e.kind === 'mountain') ok = Math.abs(qx - e.x) < e.mw * 0.5 && qy > e.y - e.mh * 0.6 && qy < e.y + e.mh * 0.75;
+        else ok = Math.hypot(qx - e.x, qy - e.y - (z === 'ground' || z === 'low' ? 20 : 0)) < 120;
+      }
+      if (ok) return e;
+    }
+    return null;
+  };
+  /* 选中时把圈画在哪：它身上最显眼的一点（已算上远近） */
+  World.prototype.centerOf = function (e) {
+    const ms = this.membersOf(e), z = (MS.Kinds[e.kind] || {}).zone;
+    let cx = e.x, cy = e.y;
+    if (ms.length) { cx = 0; cy = 0; for (const m of ms) { cx += m.x; cy += m.y; } cx /= ms.length; cy /= ms.length; }
+    else if (z === 'side') cy = Math.min(this.H - 80, e.y + 60);
+    const sc = e.sc || 1, a = this.anchorOf(e);
+    return [a[0] + (cx - a[0]) * sc, a[1] + (cy - a[1]) * sc];
+  };
+  /* 把某个字化出的东西全清掉（锁着的底层除外）。返回被清的灵，好撤销 */
+  World.prototype.removeChar = function (ch) {
+    const out = [];
+    for (const e of this.ents) if (e.ch === ch && !e.dying && e.kind !== 'mark' && !(this.locked && e.layer === 0)) { e.dying = true; out.push(e); }
+    return out;
+  };
+  /* 固化：上层的物象压进底层 */
+  World.prototype.bake = function () {
+    const out = [];
+    for (const e of this.ents) if (e.layer !== 0 && !e.dying && e.kind !== 'mark' && e.kind !== 'egg') { e.layer = 0; out.push(e); }
+    return out;
+  };
+  /* 把一个淡出了（或已经消失）的灵请回来 */
+  World.prototype.revive = function (e) {
+    e.dying = false; e.fade = 1;
+    if (this.ents.indexOf(e) < 0) { this.ents.push(e); this.resort(); }
+  };
+  World.prototype.count = function (layer) { let n = 0; for (const e of this.ents) if (!e.dying && e.kind !== 'mark' && (e.layer === 0) === (layer === 0)) n++; return n; };
 
   MS.World = World;
   const Kinds = (MS.Kinds = MS.Kinds || {});
