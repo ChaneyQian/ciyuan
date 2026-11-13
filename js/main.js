@@ -13,6 +13,7 @@
   const world = new MS.World(fluid);
   const Audio = MS.Audio, Lex = MS.Lex, Glyphs = MS.Glyphs, Hand = MS.Hand, Scroll = MS.Scroll;
   MS.world = world; MS.fluid = fluid;
+  const Eggs = MS.Eggs || { bind() {}, typed() {}, spawned() { return false; }, update() {}, stop() {} };   // 彩蛋（js/eggs.js）
 
   const state = {
     W: 1, H: 1, dpr: 1,
@@ -49,6 +50,7 @@
     const key = Lex.canon[ch], def = key && MS.CHARS[key];
     let mode = forceMode || (!state.trace ? 'plain' : state.seen.has(ch) ? 'quick' : 'full');
     state.seen.add(ch);
+    Eggs.typed(ch);
     const pan = (x / state.W * 2 - 1) * 0.7;
     Glyphs.add(ch, x, y, {
       mode, hand, size: glyphSize(), world, known: !!def, note: def && key === ch ? def.note : null,
@@ -69,18 +71,19 @@
   function afterSpawn(key) {
     const present = world.present();
     refreshDock(key, present);
+    const egg = Eggs.spawned(key);                 // 凑齐了某个彩蛋：这时由它来题句
     if (MS.CHARS[key].kind === 'clear') { showVerse(null); return; }
     const pair = Lex.matchPair(key, present);
     if (pair) { showPair(pair, key); setTimeout(() => Audio.play('pair'), 900); }
     const v = Lex.verseFor(key, present, state.verse);
-    if (v && !state.auto) showVerse(v, present);
+    if (v && !state.auto && !egg) showVerse(v, present);
   }
 
   /* ---------- 右侧竖题 ---------- */
   const verseEl = $('verse');
-  function showVerse(L, present, src) {
+  function showVerse(L, present, src, by) {      // src：题句旁的落款；by：留影上的落款（都缺省为《声律启蒙》）
     if (!L) { verseEl.classList.add('leaving'); state.verse = ''; return; }
-    state.verse = L.text;
+    state.verse = L.text; state.verseBy = by || '《声律启蒙》';
     verseEl.classList.remove('leaving');
     verseEl.innerHTML = '';
     let k = 0;
@@ -98,6 +101,7 @@
     s.textContent = src || ('声律启蒙 · ' + L.rhyme);
     verseEl.appendChild(s);
   }
+  Eggs.bind({ world, verse: showVerse, auto: () => state.auto });
 
   /* ---------- 对仗 ---------- */
   const pairEl = $('pair');
@@ -193,7 +197,7 @@
   });
   window.addEventListener('click', () => volsEl.classList.remove('show'));
   function openScroll(id) {
-    wake(); setAuto(false);
+    wake(); setAuto(false); Eggs.stop(true);
     if (!Scroll.open(id, fluid, state.W, state.H)) return;
     Hand.setEnabled(true); pyClear(); Glyphs.list.length = 0;
     $('btn-scroll').textContent = '收卷'; press($('btn-scroll'), true); press($('btn-auto'), false);
@@ -299,7 +303,7 @@
       g.fillStyle = world.night ? 'rgba(226,224,210,.75)' : 'rgba(30,28,26,.72)';
       g.font = (17 * k) + 'px "Ma Shan Zheng","STKaiti","KaiTi",serif';
       g.textAlign = 'right';
-      g.fillText(state.verse + '　——《声律启蒙》', x - 16 * k, y + s * 1.55);
+      g.fillText(state.verse + '　——' + (state.verseBy || '《声律启蒙》'), x - 16 * k, y + s * 1.55);
     }
     return c;
   }
@@ -496,6 +500,7 @@
     if (py.timer > 0 && (py.timer -= dt) <= 0) pyPick(0);
     Hand.update(dt);
     world.update(dt);
+    Eggs.update(dt);
     Glyphs.update(dt);
     fluid.step(dt);
     fluid.render();
