@@ -366,6 +366,7 @@
 
   /* 远山：两重，各走各的慢（视差） */
   function farHills(ctx, w, f, base, hgt, alpha, seed) {
+    if (S.vol.def.hills) { hgt *= S.vol.def.hills(S); if (hgt < 3) return; }   // 一卷可以自己说哪里有远山、多高（def.hills(S) → 0..1；海上没有山）
     const W = S.W, H = S.H, k = S.k, c = S.cam;
     const y0 = H / 2 + (base - c.y) * k * (0.35 + f * 0.65);
     ctx.beginPath(); ctx.moveTo(0, H);
@@ -723,7 +724,7 @@
     // 鬃：浓墨，一绺一绺往后上方甩出去，梢上飞白
     for (let i = 0; i < 10; i++) {
       const u = i / 9, mx = lerp(neck[0], nx, u) - 6 + u * 3, my = lerp(neck[1], ny, u) - 7;
-      const st = strand(mx, my, Math.PI * (o.graze ? 1.02 : 1.1) - u * 0.25, 13 + (i % 3) * 5 + 7 * walk, t * 3.4 + i, 2 + 4 * walk, 0.26);
+      const st = strand(mx, my, Math.PI * (o.graze ? 1.02 : 1.1) - u * 0.25, 13 + (i % 3) * 5 + 7 * Math.min(walk, 1), t * 3.4 + i, 2 + 4 * Math.min(walk, 1.2), 0.26);   // 跑得再快，鬃也只这么长
       mark(ctx, st, taper(3.8), INK(0.86));
       dry(ctx, dense(st, 2), (tt) => 2 + 9 * tt, INK(0.66), 4, i + 1);
     }
