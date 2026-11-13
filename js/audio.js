@@ -320,7 +320,9 @@
     wine: (t, p) => { bell(freq(14), t, { qing: true, vol: 0.1, pan: p }); phrase('pipa', [[7, 0.2], [9, 0.2], [7, 0.4], [4, 0.6]], t + 0.25, { vol: 0.26, pan: p }); },
     spring: (t, p) => { for (let k = 0; k < 6; k++) pluck('zheng', freq(14 - k), t + k * 0.24 + R(0, 0.05), { vol: 0.2, pan: p + R(-0.2, 0.2) }); },
     ice: (t, p) => { for (let k = 0; k < 3; k++) bell(freq(20 - k * 3), t + k * 0.5, { qing: true, vol: 0.09, pan: p }); noiseSweep(t + 1.2, 0.25, 3000, 6000, 2000, 2, 0.08, p); },
-    tears: (t, p) => { for (let k = 0; k < 3; k++) pluck('zheng', freq(12 - k * 2), t + k * 0.7, { vol: 0.24, pan: p, bend: -2 }); }
+    tears: (t, p) => { for (let k = 0; k < 3; k++) pluck('zheng', freq(12 - k * 2), t + k * 0.7, { vol: 0.24, pan: p, bend: -2 }); },
+    // —— 为演《春江花月夜》添的
+    tide: (t, p) => { noiseSweep(t, 3.4, 240, 620, 180, 0.6, 0.2, p); noiseSweep(t + 2.2, 3, 200, 520, 160, 0.6, 0.14, -p); pluck('qin', freq(-5), t + 0.2, { vol: 0.6, pan: p, vib: 1 }); gliss(t + 1.3, 2, 9, 0.1, 0.2, p); }
   };
 
   /* 《琵琶行》里的曲段：诗怎么比，就怎么弹 */
@@ -340,7 +342,21 @@
     ape: (t) => { flute(freq(14), t, 1.4, { xiao: true, vol: 0.13, fall: -5 }); flute(freq(12), t + 1.7, 1.9, { xiao: true, vol: 0.11, fall: -7 }); },   // 猿哀鸣
     flute: (t) => phrase('di', [[4, 0.3], [5, 0.2], [4, 0.5], [2, 0.3], [4, 0.9]], t, { vol: 0.11, vib: 0.03 }),                          // 山歌与村笛
     urgent: (t) => { for (let k = 0; k < 28; k++) pluck('pipa', freq([7, 9, 7, 5][k % 4] + (k > 15 ? 2 : 0)), t + 2.8 * (1 - Math.pow(1 - k / 28, 1.6)), { vol: 0.2 + k * 0.008 }); },   // 却坐促弦弦转急
-    weep: (t) => phrase('xiao', [[4, 1.4], [2, 1.0], [0, 2.4]], t, { vol: 0.13, fall: -2 })                                               // 江州司马青衫湿
+    weep: (t) => phrase('xiao', [[4, 1.4], [2, 1.0], [0, 2.4]], t, { vol: 0.13, fall: -2 }),                                              // 江州司马青衫湿
+    // —— 《春江花月夜》：这首诗是静的，只用箫、琴、筝，间或一两声磬
+    cjRise: (t) => { phrase('xiao', [[0, 1.8], [2, 1.1], [4, 1.3], [7, 3.0]], t, { vol: 0.13 }); pluck('qin', freq(-5), t, { vol: 0.5, vib: 1 }); harmonic(freq(12), t + 4.4, { vol: 0.16, dur: 3.6 }); },   // 海上明月共潮生
+    cjLone: (t) => { pluck('qin', freq(-5), t, { vol: 0.5, vib: 1 }); harmonic(freq(14), t + 0.5, { vol: 0.2 }); harmonic(freq(12), t + 1.9, { vol: 0.17 }); harmonic(freq(9), t + 3.3, { vol: 0.16, dur: 4 }); },   // 皎皎空中孤月轮
+    cjAges: (t) => { for (let k = 0; k < 3; k++) phrase('qin', [[2, 0.7], [0, 0.7], [-3, 1.3]], t + k * 2.9, { vol: 0.56 - k * 0.15, vib: 1 }); },                 // 人生代代无穷已：同一句，一遍比一遍远
+    cjMirror: (t) => { bell(freq(17), t, { qing: true, vol: 0.1 }); harmonic(freq(12), t + 0.35, { vol: 0.16 }); },                       // 妆镜台
+    cjBlind: (t) => { tremolo('zheng', 9, t, 0.8, 0.12, -0.2); pluck('zheng', freq(7), t + 0.95, { vol: 0.26, bend: -2 }); pluck('zheng', freq(9), t + 2.2, { vol: 0.2, bend: -2 }); },   // 玉户帘中卷不去
+    cjAnvil: (t) => { for (let k = 0; k < 5; k++) { woodfish(t + k * 0.62, 400, 0.2); woodfish(t + k * 0.62 + 0.2, 340, 0.13); } phrase('xiao', [[2, 1.7], [0, 2.2]], t + 0.5, { vol: 0.1, fall: -2 }); },   // 捣衣砧上拂还来：远远的砧声
+    cjHua: (t) => { gliss(t, 5, 15, 0.09, 0.2, 0); phrase('xiao', [[7, 1.2], [9, 0.8], [11, 1.1], [9, 2.6]], t + 0.7, { vol: 0.12 }); },  // 愿逐月华流照君
+    cjPool: (t) => { pluck('qin', freq(-3), t, { vol: 0.5, vib: 1 }); harmonic(freq(11), t + 1.1, { vol: 0.14 }); },                      // 闲潭
+    cjDream: (t) => phrase('xiao', [[9, 1.5], [7, 0.9], [9, 0.6], [4, 2.8]], t, { vol: 0.11, fall: -2 }),                                 // 昨夜闲潭梦落花
+    cjSpring: (t) => { [12, 11, 9, 7, 5, 4, 2].forEach((n, k) => pluck('zheng', freq(n), t + k * 0.36 + k * k * 0.07, { vol: 0.3 - k * 0.03, bend: k > 4 ? -2 : 0 })); },   // 江水流春去欲尽：越弹越疏
+    cjSet: (t) => phrase('xiao', [[4, 1.7], [2, 1.2], [0, 1.0], [-3, 3.2]], t, { vol: 0.12, fall: -3 }),                                  // 江潭落月复西斜
+    cjReturn: (t) => phrase('qin', [[0, 0.9], [2, 0.7], [4, 0.9], [2, 0.7], [0, 1.9]], t, { vol: 0.5, vib: 1 }),                          // 不知乘月几人归
+    cjEnd: (t) => { phrase('xiao', [[7, 1.5], [4, 1.0], [2, 1.3], [0, 3.4]], t, { vol: 0.12, fall: -2 }); pluck('qin', freq(-5), t + 3.8, { vol: 0.5, vib: 1 }); harmonic(freq(10), t + 5.4, { vol: 0.14, dur: 4 }); }   // 落月摇情满江树
   };
 
   /* 世界里发生的事 → 声音 */

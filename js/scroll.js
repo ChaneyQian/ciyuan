@@ -366,6 +366,7 @@
 
   /* 远山：两重，各走各的慢（视差） */
   function farHills(ctx, w, f, base, hgt, alpha, seed) {
+    if (S.vol.def.hills) { hgt *= S.vol.def.hills(S); if (hgt < 3) return; }   // 一卷可以自己说哪里有远山、多高（def.hills(S) → 0..1；海上没有山）
     const W = S.W, H = S.H, k = S.k, c = S.cam;
     const y0 = H / 2 + (base - c.y) * k * (0.35 + f * 0.65);
     ctx.beginPath(); ctx.moveTo(0, H);
