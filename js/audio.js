@@ -361,6 +361,22 @@
 
   /* 世界里发生的事 → 声音 */
   const EVENT = {
+    // 角：军中的号声，低而长，先一声平的，再翻上去一个五度（彩蛋「吹角连营」用）
+    horn: (t, d) => {
+      const ctx = A.ctx, v = d.vol == null ? 0.2 : d.vol;
+      for (const [i, at, dur] of [[0, 0, 1.15], [3, 1.1, 2.3]]) {
+        const f = freq(i), s = t + at, g = ctx.createGain(), lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass'; lp.Q.value = 1.4;
+        lp.frequency.setValueAtTime(260, s); lp.frequency.linearRampToValueAtTime(1500, s + 0.4); lp.frequency.linearRampToValueAtTime(760, s + dur);
+        g.gain.setValueAtTime(0, s); g.gain.linearRampToValueAtTime(v, s + 0.2); g.gain.setValueAtTime(v, s + dur - 0.3); g.gain.linearRampToValueAtTime(0, s + dur + 0.35);
+        for (const det of [1, 1.005]) {
+          const os = ctx.createOscillator(); os.type = 'sawtooth';
+          os.frequency.setValueAtTime(f * det * 0.92, s); os.frequency.exponentialRampToValueAtTime(f * det, s + 0.16);
+          os.connect(lp); os.start(s); os.stop(s + dur + 0.5);
+        }
+        lp.connect(g); out(g, d.pan, 0.7);
+      }
+    },
     song: (t, d) => { const f = SONG[d.name]; if (f) f(t); },
     pearl: (t, d) => pluck('pipa', freq(d.big ? 9 : 14 + ((Math.random() * 4) | 0)), t, { vol: d.big ? 0.28 : 0.18, pan: R(-0.4, 0.4) }),
     raindrop: (t, d) => pluck('pipa', freq(11 + ((Math.random() * 9) | 0)), t, { vol: R(0.06, 0.17), pan: R(-0.9, 0.9) }),
