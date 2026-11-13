@@ -23,13 +23,13 @@
     '烟': { kind: 'mist', tone: '平', group: '天', note: '形声字，从火垔声', alias: '岚霭' },
     // —— 山水
     '山': { kind: 'mountain', tone: '平', group: '地', note: '象群峰并立之形', alias: '峰岭岳' },
-    '水': { kind: 'water', tone: '仄', group: '地', note: '象流水之形，中为水脉，旁为水点', alias: '江河溪' },
+    '水': { kind: 'water', tone: '仄', group: '地', note: '象流水之形，中为水脉，旁为水点', alias: '江河溪池湖' },
     // —— 草木
     '竹': { kind: 'bamboo', tone: '仄', group: '木', note: '象竹叶下垂之形', alias: '篁' },
     '松': { kind: 'pine', tone: '平', group: '木', note: '形声字，从木公声' },
     '柳': { kind: 'willow', tone: '仄', group: '木', note: '形声字，从木卯声' },
     '梅': { kind: 'plum', tone: '平', group: '木', note: '形声字，从木每声' },
-    '花': { kind: 'flower', tone: '平', group: '木', note: '本作「华」，象草木花开之形', alias: '杏桃棠蕊' },
+    '花': { kind: 'flower', tone: '平', group: '木', note: '本作「华」，象草木花开之形', alias: '杏桃棠蕊李梨' },
     '荷': { kind: 'lotus', tone: '平', group: '木', note: '形声字，从艸何声', alias: '莲菡萏蓉芰' },
     '菊': { kind: 'mum', tone: '仄', group: '木', note: '形声字，从艸匊声' },
     '草': { kind: 'grass', tone: '仄', group: '木', note: '本作「艸」，象草芽并生', alias: '莎茸蒲' },
@@ -45,8 +45,8 @@
     '鱼': { kind: 'fish', tone: '平', group: '鳞', note: '象鱼之形，首、鳞、尾俱全', alias: '鲤' },
     '龙': { kind: 'dragon', tone: '平', group: '鳞', note: '象巨口长身、头上有冠的神物', alias: '蛟' },
     // —— 器物
-    '舟': { kind: 'boat', tone: '平', group: '器', note: '象木船之形', alias: '船棹艇舫帆' },
-    '楼': { kind: 'tower', tone: '平', group: '器', note: '形声字，从木娄声', alias: '台阁殿亭' },
+    '舟': { kind: 'boat', tone: '平', group: '器', note: '象木船之形', alias: '船棹艇舫帆渔' },
+    '楼': { kind: 'tower', tone: '平', group: '器', note: '形声字，从木娄声', alias: '台阁殿亭宫' },
     '钟': { kind: 'bell', tone: '平', group: '器', note: '形声字，从金童声' },
     '鼓': { kind: 'drum', tone: '仄', group: '器', note: '左象鼓形，右象手持槌而击' },
     '剑': { kind: 'sword', tone: '仄', group: '器', note: '形声字，从刃佥声' },
@@ -69,7 +69,7 @@
     '川': { kind: 'water', tone: '平', group: '地', note: '象两岸之间有水流过' },
     '波': { kind: 'water', tone: '平', group: '地', note: '形声字，从水皮声' },
     '渊': { kind: 'pool', tone: '平', group: '地', note: '象回旋的深水，外有岸' },
-    '岩': { kind: 'rock', tone: '平', group: '地', note: '山上之石；古作「巖」，从山严声' },
+    '岩': { kind: 'rock', tone: '平', group: '地', note: '山上之石；古作「巖」，从山严声', alias: '石' },
     '林': { kind: 'grove', tone: '平', group: '木', note: '二木相并，树木丛生' },
     '兰': { kind: 'orchid', tone: '平', group: '木', note: '形声字，繁体作「蘭」，从艸阑声' },
     '芝': { kind: 'zhi', tone: '平', group: '木', note: '形声字，从艸之声；瑞草' },
@@ -88,7 +88,25 @@
     '枫': { kind: 'maple', tone: '平', group: '木', note: '形声字，从木风声；霜后叶丹' },
     '泉': { kind: 'spring', tone: '平', group: '地', note: '象水从石穴中流出之形' },
     '冰': { kind: 'ice', tone: '平', group: '地', note: '古作「仌」，象冰裂之纹，后加水旁' },
-    '酒': { kind: 'wine', tone: '仄', group: '器', note: '从水从酉；「酉」象酒坛之形' }
+    '酒': { kind: 'wine', tone: '仄', group: '器', note: '从水从酉；「酉」象酒坛之形' },
+    // —— 再从《声律启蒙》里请出的一批（画法见 wanxiang.js）
+    '露': { kind: 'dew', tone: '仄', group: '天', note: '形声字，从雨路声' },
+    '海': { kind: 'sea', tone: '仄', group: '地', note: '形声字，从水每声；百川所归', alias: '浪潮涛' },
+    '城': { kind: 'city', tone: '平', group: '地', note: '从土成声；金文象城垣与门楼', alias: '塞关' },
+    '叶': { kind: 'leaf', tone: '仄', group: '木', note: '繁体作「葉」，从艸枼声；「枼」象木上有叶' },
+    '凤': { kind: 'phoenix', tone: '仄', group: '羽', note: '甲骨文象高冠长尾之鸟，后加凡声', alias: '鸾' },
+    '鹭': { kind: 'egret', tone: '仄', group: '羽', note: '形声字，从鸟路声', alias: '鸥' },
+    '蜂': { kind: 'bee', tone: '平', group: '鳞', note: '形声字，从虫夆声' },
+    '虾': { kind: 'shrimp', tone: '平', group: '鳞', note: '繁体作「蝦」，从虫叚声' },
+    '虎': { kind: 'tiger', tone: '仄', group: '兽', note: '象虎之形：巨口、利爪、斑纹' },
+    '牛': { kind: 'ox', tone: '平', group: '兽', note: '象牛头之形，突出一对弯角', alias: '犊' },
+    '猿': { kind: 'ape', tone: '平', group: '兽', note: '形声字，从犬袁声' },
+    '琴': { kind: 'qin', tone: '平', group: '器', note: '象琴之形；小篆上象弦与琴柱', alias: '瑟' },
+    '书': { kind: 'book', tone: '平', group: '器', note: '繁体作「書」，从聿者声；「聿」是手执笔', alias: '卷' },
+    '笔': { kind: 'pen', tone: '仄', group: '器', note: '繁体作「筆」，从竹从聿；手执笔之形', alias: '墨砚' },
+    '茶': { kind: 'tea', tone: '平', group: '器', note: '古作「荼」，唐以后减去一横' },
+    '笛': { kind: 'flute', tone: '仄', group: '器', note: '形声字，从竹由声', alias: '箫管' },
+    '香': { kind: 'incense', tone: '平', group: '器', note: '从黍从甘，黍稷之馨', alias: '炉' }
   };
   // 拼音（内置拼音输入用）与笔画数（手写判定用）
   const PY = {
@@ -100,7 +118,9 @@
     '霜': 'shuang', '雾': 'wu', '光': 'guang', '曙': 'shu', '川': 'chuan', '波': 'bo', '渊': 'yuan', '岩': 'yan',
     '林': 'lin', '兰': 'lan', '芝': 'zhi', '蕖': 'qu', '鸿': 'hong', '凫': 'fu', '羽': 'yu',
     '珠': 'zhu', '旗': 'qi', '车': 'che', '神': 'shen', '人': 'ren', '马': 'ma', '泪': 'lei',
-    '枫': 'feng', '泉': 'quan', '冰': 'bing', '酒': 'jiu'
+    '枫': 'feng', '泉': 'quan', '冰': 'bing', '酒': 'jiu',
+    '露': 'lu', '海': 'hai', '城': 'cheng', '叶': 'ye', '凤': 'feng', '鹭': 'lu', '蜂': 'feng', '虾': 'xia', '虎': 'hu', '牛': 'niu', '猿': 'yuan',
+    '琴': 'qin', '书': 'shu', '笔': 'bi', '茶': 'cha', '笛': 'di', '香': 'xiang'
   };
   const STROKES = {
     '日': 4, '月': 4, '星': 9, '云': 4, '雨': 8, '雪': 11, '风': 4, '雷': 13, '虹': 9, '霞': 17, '烟': 10,
@@ -111,13 +131,15 @@
     '霜': 17, '雾': 13, '光': 6, '曙': 17, '川': 3, '波': 8, '渊': 11, '岩': 8,
     '林': 8, '兰': 5, '芝': 6, '蕖': 14, '鸿': 11, '凫': 6, '羽': 6,
     '珠': 10, '旗': 14, '车': 4, '神': 9, '人': 2, '马': 3, '泪': 8,
-    '枫': 8, '泉': 9, '冰': 6, '酒': 10
+    '枫': 8, '泉': 9, '冰': 6, '酒': 10,
+    '露': 21, '海': 10, '城': 9, '叶': 5, '凤': 4, '鹭': 18, '蜂': 13, '虾': 9, '虎': 8, '牛': 4, '猿': 13,
+    '琴': 12, '书': 4, '笔': 10, '茶': 9, '笛': 11, '香': 9
   };
   for (const ch in C) { C[ch].py = PY[ch]; C[ch].strokes = STROKES[ch]; }
   MS.CHARS = C;
   MS.CHAR_LIST = Object.keys(C);
   MS.HOME_LIST = MS.CHAR_LIST.filter((ch) => C[ch].only !== 'scroll');   // 首页可写的字
-  MS.GROUPS = [['天', '天象'], ['地', '山水'], ['木', '草木'], ['羽', '禽鸟'], ['鳞', '虫鱼'], ['器', '器物'], ['人', '人事'], ['时', '四时']];
+  MS.GROUPS = [['天', '天象'], ['地', '山水'], ['木', '草木'], ['羽', '禽鸟'], ['鳞', '虫鱼'], ['兽', '走兽'], ['器', '器物'], ['人', '人事'], ['时', '四时']];
 
   /* 字 -> 世界中的那个字（把别名折回去） */
   const canon = {};

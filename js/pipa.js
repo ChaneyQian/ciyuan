@@ -13,7 +13,7 @@
   'use strict';
   const MS = window.MS, Kinds = MS.Kinds, S = MS.Scroll, P = S.props;
   const { clamp, lerp, ease, easeOut, softDot, leafPath, noise1, TAU } = MS.util;
-  const { mark, strand, swell, taper } = MS.ink;
+  const { mark, strand, swell, taper, nail, orchid, wet, dry, dense } = MS.ink;
 
   /* =====================================================================
    *  画中之物
@@ -57,16 +57,21 @@
     ctx.save(); ctx.translate(x, y); ctx.scale(s * f, s); ctx.rotate(Math.sin(t * 0.6) * 0.01 + (pose === 'weep' ? 0.07 : 0));
     const robe = () => { ctx.beginPath(); ctx.moveTo(-16, -98); ctx.bezierCurveTo(-40, -72, -60, -30, -66, 0); ctx.quadraticCurveTo(0, 9, 62, 0); ctx.bezierCurveTo(50, -22, 28, -58, 15, -98); ctx.closePath(); };
     softDot(ctx, 0, -40, 78, INK(0.1), INK(0));
-    robe(); ctx.fillStyle = INK(tone); ctx.fill();
+    // 袍：泼墨。淡墨铺底，背侧压浓，膝上留一道亮
+    const gr = ctx.createLinearGradient(-62, 0, 60, 0);
+    gr.addColorStop(0, INK(tone * 1.2)); gr.addColorStop(0.5, INK(tone * 0.55)); gr.addColorStop(1, INK(tone * 0.9));
+    robe(); ctx.fillStyle = gr; ctx.fill();
+    ctx.save(); ctx.clip(); softDot(ctx, -50, -26, 44, INK(tone * 0.7), INK(0)); softDot(ctx, 4, -34, 26, w.col('paper', 0.28 * a), w.col('paper', 0)); ctx.restore();
     if (o.blue) { robe(); ctx.fillStyle = w.col('blue', 0.62 * o.blue * a); ctx.fill(); ctx.fillStyle = w.col('green', 0.3 * o.blue * a); ctx.fill(); }
-    mark(ctx, [-16, -98, -44, -56, -66, 0], swell(2.2), INK(0.66)); mark(ctx, [15, -98, 36, -50, 62, 0], swell(1.7), INK(0.52));
-    mark(ctx, [-44, -10, -6, -24, 40, -12], swell(1.4), INK(0.4));
-    mark(ctx, [-15, -64, 0, -60, 15, -64], () => 4.6, w.col('red', 0.45 * a));
+    mark(ctx, [-16, -98, -44, -56, -66, 0], nail(4.2), INK(0.84)); mark(ctx, [15, -98, 36, -50, 62, 0], orchid(2.6), INK(0.62));
+    mark(ctx, [-44, -10, -6, -24, 40, -12], orchid(2), INK(0.46)); mark(ctx, [-66, 0, -20, 7, 24, 5, 62, 0], orchid(2), INK(0.5));
+    mark(ctx, [-8, -98, 2, -84, 4, -70], () => 3, w.col('white', 0.9 * a)); mark(ctx, [-9, -98, 1, -84, 3, -70], nail(1.8), INK(0.84));
+    wet(ctx, [-15, -64, 0, -60, 15, -64], () => 4.6, w, 0.52 * a, 0.38 * a, 'red');
     const arm = { rest: [10, -90, 26, -66, 30, -40, 12, -28], cup: [10, -90, 30, -84, 46, -96, 52, -112], weep: [10, -90, 28, -96, 24, -116, 10, -124] }[pose];
     const sleeve = () => {
-      mark(ctx, arm, (tt) => 13 + 15 * tt * (pose === 'rest' ? 1 : 0.55), INK(tone));
+      wet(ctx, arm, (tt) => 13 + 15 * tt * (pose === 'rest' ? 1 : 0.55), w, tone * 1.15 * a, tone * 0.65 * a);
       if (o.blue) mark(ctx, arm, (tt) => 12 + 13 * tt * 0.6, w.col('blue', 0.5 * o.blue * a));
-      mark(ctx, arm, swell(1.5), INK(0.58));
+      mark(ctx, arm, orchid(2.4), INK(0.7));
     };
     if (pose !== 'weep') sleeve();
     if (pose === 'cup') {
@@ -89,30 +94,32 @@
     ctx.save(); ctx.translate(x, y); ctx.scale(s * f, s); ctx.rotate(Math.sin(t * 0.7) * 0.012 + Math.sin(t * play * 1.3) * 0.012 * Math.min(play, 2));
     for (let i = 0; i < 2; i++) {                                                // 披帛
       const pp = strand(-12, -92 + i * 12, Math.PI - 0.34 + i * 0.36, 120 + i * 44, t * 1.6 + i * 2, 15 * wind, -0.1 + i * 0.3);
-      mark(ctx, pp, (tt) => 12 * Math.pow(Math.sin(Math.PI * Math.pow(tt * 0.92 + 0.04, 0.6)), 0.8) + 0.6, i ? BLUE(0.3) : RED(0.26));
-      mark(ctx, pp, taper(1.2), INK(0.26));
+      wet(ctx, pp, (tt) => 12 * Math.pow(Math.sin(Math.PI * Math.pow(tt * 0.92 + 0.04, 0.6)), 0.8) + 0.6, w, 0.4 * a, 0.1 * a, i ? 'blue' : 'red');
+      mark(ctx, pp, orchid(1.6), INK(0.3));
     }
     // 裙：坐下来铺成一堆
     ctx.beginPath(); ctx.moveTo(-14, -60); ctx.bezierCurveTo(-44, -48, -72, -18, -80, 0); ctx.quadraticCurveTo(0, 10, 72, 0); ctx.bezierCurveTo(58, -20, 30, -46, 14, -60); ctx.closePath();
     ctx.fillStyle = WHITE(0.94); ctx.fill();
     if (o.young) { ctx.fillStyle = RED(0.6); ctx.fill(); }
-    ctx.save(); ctx.clip(); softDot(ctx, -46, -10, 50, INK(0.2), INK(0)); softDot(ctx, 40, -22, 34, INK(0.1), INK(0)); ctx.restore();
-    mark(ctx, [-14, -60, -46, -44, -80, 0], swell(2), INK(0.6)); mark(ctx, [14, -60, 44, -34, 72, 0], swell(1.6), INK(0.48));
-    mark(ctx, [-40, -6, -4, -20, 36, -8], swell(1.3), INK(0.34));
+    ctx.save(); ctx.clip(); softDot(ctx, -50, -10, 54, INK(0.24), INK(0)); softDot(ctx, 40, -22, 34, INK(0.1), INK(0)); ctx.restore();
+    mark(ctx, [-14, -60, -46, -44, -80, 0], nail(3.4), INK(0.74)); mark(ctx, [14, -60, 44, -34, 72, 0], orchid(2.4), INK(0.54));
+    mark(ctx, [-40, -6, -4, -20, 36, -8], orchid(1.8), INK(0.4)); mark(ctx, [-30, -34, -52, -14, -66, 2], orchid(1.4), INK(0.3));
+    mark(ctx, [-80, 0, -30, 8, 20, 6, 72, 0], orchid(2), INK(0.46));
     // 上身
     ctx.beginPath(); ctx.moveTo(-14, -60); ctx.lineTo(-16, -98); ctx.quadraticCurveTo(0, -108, 15, -98); ctx.lineTo(13, -60); ctx.closePath();
     ctx.fillStyle = o.young ? w.col('pink', 0.8 * a) : WHITE(0.95); ctx.fill();
-    mark(ctx, [-16, -98, -15, -78, -14, -60], swell(1.5), INK(0.5));
-    mark(ctx, [-14, -62, 0, -59, 13, -62], () => 5, RED(0.66));
+    mark(ctx, [-16, -98, -15, -78, -14, -60], nail(2.2), INK(0.6));
+    mark(ctx, [-8, -103, 1, -88, 5, -72], nail(1.6), INK(0.62)); mark(ctx, [11, -102, 3, -90], taper(1.4), INK(0.5));
+    wet(ctx, [-14, -62, 0, -59, 13, -62], () => 5, w, 0.7 * a, 0.5 * a, 'red');
     ctx.save(); ctx.translate(0, 98); S.parts.ladyHead(ctx, w, t, a, wind); ctx.restore();
     // 琵琶：弹时斜抱在怀，遮面时竖在脸前
     const px = o.idle ? 62 : lerp(14, 13, v), py = o.idle ? -22 : lerp(-52, -66, v), rot = o.idle ? 1.2 : lerp(-0.62, -0.04, v);
     const at = (lx, ly) => [px + lx * Math.cos(rot) - ly * Math.sin(rot), py + lx * Math.sin(rot) + ly * Math.cos(rot)];
     const hands = () => {
-      if (o.idle) { const arm = [10, -90, 24, -70, 26, -46, 10, -34]; mark(ctx, arm, (tt) => 10 + 14 * tt, WHITE(0.92)); mark(ctx, arm, swell(1.5), INK(0.5)); return; }
+      if (o.idle) { const arm = [10, -90, 24, -70, 26, -46, 10, -34]; mark(ctx, arm, (tt) => 10 + 14 * tt, WHITE(0.92)); mark(ctx, arm, orchid(2.2), INK(0.56)); return; }
       const lh = at(0, -58), rh = at(3 + Math.sin(t * play * 9) * 3 * Math.min(1, play), 2 + Math.cos(t * play * 9) * 4 * Math.min(1, play));
       const la = [-12, -94, lerp(-30, -10, v), -84, lh[0] - 8, lh[1] + 6, lh[0], lh[1]], ra = [12, -94, 34, -76, rh[0] + 16, rh[1] - 4, rh[0], rh[1]];
-      for (const arm of [la, ra]) { mark(ctx, arm, (tt) => 9 + 13 * Math.sin(Math.PI * Math.min(1, tt * 1.2)) * 0.8, WHITE(0.93)); mark(ctx, arm, swell(1.4), INK(0.5)); }
+      for (const arm of [la, ra]) { mark(ctx, arm, (tt) => 9 + 13 * Math.sin(Math.PI * Math.min(1, tt * 1.2)) * 0.8, WHITE(0.93)); mark(ctx, arm, orchid(2.2), INK(0.56)); }
       for (const h of [lh, rh]) { ctx.fillStyle = WHITE(0.98); ctx.beginPath(); ctx.arc(h[0], h[1], 3.4, 0, TAU); ctx.fill(); }
     };
     ctx.save(); ctx.translate(px, py); ctx.rotate(rot);

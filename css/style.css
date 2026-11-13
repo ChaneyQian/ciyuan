@@ -97,12 +97,12 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 
 /* —— 字钮 —— */
 .dock { position: fixed; left: 0; right: 0; bottom: 14px; display: flex; flex-direction: column; align-items: center; gap: 9px; pointer-events: none; animation: rise 1.6s .3s var(--ease) both; }
-.chars { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 5px; max-width: min(1040px, 94vw); pointer-events: auto; }
-.chars .grp { display: flex; gap: 5px; padding: 0 7px; position: relative; }
+.chars { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px 3px; max-width: min(1500px, 96vw); pointer-events: auto; }   /* 字多了：钮小一号，排宽一些 */
+.chars .grp { display: flex; gap: 4px; padding: 0 6px; position: relative; }
 .chars .grp + .grp::before { content: ""; position: absolute; left: -3px; top: 22%; bottom: 22%; width: 1px; background: rgba(var(--ink), .16); }
 .chars button {
-  width: 35px; height: 35px; border-radius: 50%;
-  font-family: var(--brush); font-size: 20px; line-height: 33px; text-align: center;
+  width: 31px; height: 31px; border-radius: 50%;
+  font-family: var(--brush); font-size: 18px; line-height: 29px; text-align: center;
   border: 1px solid rgba(var(--ink), .26);
   color: rgba(var(--ink), .84);
   background: rgba(236, 230, 216, .34);

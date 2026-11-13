@@ -462,6 +462,52 @@
   /* 一笔：起笔重、收笔轻 */
   const taper = (wid) => (tt) => wid * (1 - tt * 0.9) + 0.3;
   function mark(ctx, pts, wf, color) { if (brushPath(ctx, pts, wf, null, null, true)) { ctx.fillStyle = color; ctx.fill(); } }
+
+  /* ---------- 写意的几种笔法（齐白石画虾、徐悲鸿画马都是这一路：浓淡干湿，一笔是一笔） ---------- */
+  const hash = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
+  /* 钉头鼠尾描：起笔一顿，随即收细，拖出长长的尾 */
+  const nail = (wid) => (tt) => wid * (tt < 0.07 ? 0.7 + tt / 0.07 * 0.9 : 1.6 - Math.min(1, (tt - 0.07) / 0.16) * 0.6) * (1 - 0.86 * Math.pow(tt, 1.5)) + 0.25;
+  /* 兰叶描：一笔之中提按两三次，粗细相间，像一片兰叶 */
+  const orchid = (wid) => (tt) => wid * (0.28 + 0.72 * Math.pow(Math.abs(Math.sin(Math.PI * (tt * 1.5 + 0.12))), 0.7)) * (1 - 0.5 * tt * tt) + 0.25;
+  /* 湿笔：一笔蘸墨，起处浓、去处淡，边上积一圈水痕。color 不给就是墨 */
+  function wet(ctx, pts, wf, w, a0, a1, color) {
+    if (!brushPath(ctx, pts, wf, null, null, true)) return;
+    const n = pts.length, c = (a) => (color ? w.col(color, a) : w.ink(a));
+    if (a1 == null) a1 = a0 * 0.35;
+    const g = ctx.createLinearGradient(pts[0], pts[1], pts[n - 2], pts[n - 1]);
+    g.addColorStop(0, c(a0)); g.addColorStop(1, c(a1));
+    ctx.fillStyle = g; ctx.fill();
+    ctx.strokeStyle = c(Math.max(a0, a1) * 0.2); ctx.lineWidth = 0.8; ctx.stroke();
+  }
+  /* 把折线加密几倍（飞白要一小段一小段地断） */
+  function dense(pts, k) {
+    const out = [], n = pts.length / 2;
+    for (let i = 0; i < n - 1; i++) for (let j = 0; j < k; j++) { const u = j / k; out.push(lerp(pts[i * 2], pts[i * 2 + 2], u), lerp(pts[i * 2 + 1], pts[i * 2 + 3], u)); }
+    out.push(pts[n * 2 - 2], pts[n * 2 - 1]);
+    return out;
+  }
+  /* 飞白：枯笔扫过，一丝一丝，中间露着纸；越到笔梢越枯 */
+  function dry(ctx, pts, wf, color, n, seed) {
+    const m = pts.length / 2;
+    if (m < 2) return;
+    n = n || 6; seed = seed || 1;
+    ctx.strokeStyle = color; ctx.lineCap = 'round';
+    for (let j = 0; j < n; j++) {
+      const off = n > 1 ? j / (n - 1) - 0.5 : 0;
+      ctx.lineWidth = 0.6 + hash(j * 7.3 + seed) * 1.2;
+      ctx.beginPath();
+      let pen = false;
+      for (let i = 0; i < m; i++) {
+        const a = Math.max(0, i - 1), b = Math.min(m - 1, i + 1);
+        const dx = pts[b * 2] - pts[a * 2], dy = pts[b * 2 + 1] - pts[a * 2 + 1], d = Math.hypot(dx, dy) || 1, t = i / (m - 1);
+        const hw = (typeof wf === 'function' ? wf(t) : wf) * off;
+        if (noise1(i * 0.9 + j * 5.1 + seed * 3.3) < 0.2 + t * 0.42) { pen = false; continue; }
+        const x = pts[i * 2] - dy / d * hw, y = pts[i * 2 + 1] + dx / d * hw;
+        if (!pen) { ctx.moveTo(x, y); pen = true; } else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+  }
   /* 一绺毛发：沿 ang 方向飘出去，带波浪与下垂 */
   function strand(x0, y0, ang, len, phase, wave, droop) {
     const pts = [], n = 7, c = Math.cos(ang), s = Math.sin(ang);
@@ -817,5 +863,5 @@
       ctx.restore();
     }
   };
-  MS.ink = { mark, strand, bez, swell, taper };          // 这几种笔法别处也用（手卷里的人物、车马）
+  MS.ink = { mark, strand, bez, swell, taper, nail, orchid, wet, dry, dense };          // 这几种笔法别处也用（手卷里的人物、车马）
 })();

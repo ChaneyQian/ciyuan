@@ -17,7 +17,7 @@
   'use strict';
   const MS = window.MS;
   const { clamp, lerp, ease, easeOut, softDot, leafPath, noise1, brushPath, mulberry, TAU } = MS.util;
-  const { mark, strand, swell, taper } = MS.ink;
+  const { mark, strand, swell, taper, nail, orchid, wet, dry, dense } = MS.ink;
   const VH = 1000;
 
   const S = (MS.Scroll = {
@@ -518,33 +518,62 @@
    *  画中之物（都按水墨来：淡墨晕染作体，要紧处提线，颜色只点一点）
    * ===================================================================== */
 
+  /* 人物用的是「兼工带写」：面与手留白，只提几根细而匀的铁线；
+     衣是泼墨或留白，靠提按分明的线（钉头鼠尾、兰叶描）和淡墨渲染立起来；发、冠、须用浓墨，梢上枯笔飞白。 */
+
   /* 仕女的头面（颈根在 0,-203）与士人的头面（颈根在 0,-170）：坐着的人也用，挪一挪就是 */
   function ladyHead(ctx, w, t, a, wind) {
-    const INK = (v) => w.ink(v * a), RED = (v) => w.col('red', v * a), WHITE = (v) => w.col('white', v * a);
+    const INK = (v) => w.ink(v * a), DK = (v) => 'rgba(34,30,28,' + v * a + ')', RED = (v) => w.col('red', v * a), WHITE = (v) => w.col('white', v * a);
     mark(ctx, [1, -203, 2.5, -213], () => 6.5, WHITE(0.98));
+    mark(ctx, [-2.6, -203, -1.6, -212], nail(1.2), INK(0.5));
+    // 脑后垂下的一绺长发：湿墨一笔，梢上枯了
+    const hair = strand(-7, -228, Math.PI / 2 + 0.3, 66, t * 1.5, 3 * wind, 0.03);
+    wet(ctx, hair, (tt) => 9.5 * (1 - tt * 0.78) + 0.5, w, 0.88 * a, 0.5 * a);
+    dry(ctx, dense(hair, 2), (tt) => 3 + 10 * tt, INK(0.6), 4, 5);
+    // 面：留白；两颊一点胭脂；轮廓只在腮与下颌提一根铁线
     ctx.beginPath(); ctx.ellipse(3.5, -225, 10.5, 13.2, 0.06, 0, TAU); ctx.fillStyle = WHITE(0.98); ctx.fill();
-    ctx.strokeStyle = INK(0.42); ctx.lineWidth = 0.9; ctx.beginPath(); ctx.ellipse(3.5, -225, 10.5, 13.2, 0.06, -0.9, 1.9); ctx.stroke();
-    ctx.strokeStyle = INK(0.8); ctx.lineWidth = 1.1; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(6.4, -227.4); ctx.quadraticCurveTo(9.4, -228.6, 12, -227.2); ctx.moveTo(5.6, -231.6); ctx.quadraticCurveTo(9.4, -233.6, 12.8, -231.4); ctx.stroke();
-    ctx.fillStyle = RED(0.85); ctx.beginPath(); ctx.ellipse(10.4, -219.4, 1.8, 1.1, 0, 0, TAU); ctx.fill();
-    // 云髻峨峨
-    mark(ctx, strand(-7, -228, Math.PI / 2 + 0.3, 64, t * 1.5, 3 * wind, 0.03), taper(8.5), INK(0.8));
-    ctx.fillStyle = INK(0.88); ctx.beginPath(); ctx.ellipse(-0.6, -232, 12.2, 9.6, -0.22, 0, TAU); ctx.fill();
-    ctx.strokeStyle = INK(0.88); ctx.lineWidth = 4.4;
+    softDot(ctx, 9, -220.6, 6.4, w.col('pink', 0.34 * a), w.col('pink', 0));
+    mark(ctx, [13.4, -231.4, 14.3, -224, 11.6, -216.4, 5.2, -212.2, 0.4, -213.6], (tt) => 1.5 * Math.sin(Math.PI * Math.pow(tt, 0.8)) + 0.4, DK(0.66));
+    // 柳叶眉，凤眼：眼梢一挑，点睛
+    mark(ctx, [5, -232.2, 9.2, -234.6, 13.2, -232.4], (tt) => 1.7 * Math.sin(Math.PI * Math.pow(tt, 0.55)) + 0.3, DK(0.84));
+    mark(ctx, [6, -227.4, 9.4, -228.8, 12.8, -228.6], (tt) => 1.4 * (1 - tt * 0.5) + 0.3, DK(0.92));
+    ctx.fillStyle = DK(0.96); ctx.beginPath(); ctx.arc(9.6, -227.8, 1, 0, TAU); ctx.fill();
+    mark(ctx, [13.7, -226, 14.6, -222.4, 13.2, -221.6], () => 0.75, DK(0.5));
+    ctx.fillStyle = RED(0.9); ctx.beginPath(); ctx.ellipse(11.2, -218.4, 2, 1.1, 0.1, 0, TAU); ctx.fill();
+    ctx.fillStyle = RED(0.85); ctx.beginPath(); ctx.arc(8.8, -236.8, 1.05, 0, TAU); ctx.fill();           // 花钿
+    // 云髻峨峨：浓墨，留一线高光；鬓边几丝枯笔
+    ctx.fillStyle = INK(0.9); ctx.beginPath(); ctx.ellipse(-0.6, -232, 12.2, 9.6, -0.22, 0, TAU); ctx.fill();
+    ctx.strokeStyle = INK(0.9); ctx.lineWidth = 4.4;
     ctx.beginPath(); ctx.arc(-5, -250, 8, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.arc(8, -251, 6.6, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = w.col('paper', 0.36 * a); ctx.lineWidth = 0.9; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(-5, -250, 8, 3.6, 4.9); ctx.stroke(); ctx.beginPath(); ctx.arc(8, -251, 6.6, 4.2, 5.4); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(-1.5, -233.5, 9, 6, -0.22, 3.5, 4.9); ctx.stroke();
+    dry(ctx, [3.6, -239, 7.6, -236.6, 10.6, -231, 11.4, -224, 10.4, -218], () => 3.4, INK(0.55), 3, 2);
     ctx.fillStyle = w.col('yellow', 0.95 * a);            // 金翠首饰
     ctx.beginPath(); ctx.arc(2, -241, 2.2, 0, TAU); ctx.arc(-9, -240, 1.6, 0, TAU); ctx.arc(11, -243, 1.5, 0, TAU); ctx.fill();
     ctx.strokeStyle = w.col('yellow', 0.9 * a); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(11, -244); ctx.lineTo(24, -251); ctx.stroke();
   }
   function manHead(ctx, w, t, a, beard) {
-    const INK = (v) => w.ink(v * a), WHITE = (v) => w.col('white', v * a);
+    const INK = (v) => w.ink(v * a), DK = (v) => 'rgba(34,30,28,' + v * a + ')', WHITE = (v) => w.col('white', v * a);
     mark(ctx, [0, -170, 1.5, -180], () => 7, WHITE(0.98));
     ctx.beginPath(); ctx.ellipse(2.5, -191, 10.5, 12.5, 0.05, 0, TAU); ctx.fillStyle = WHITE(0.98); ctx.fill();
-    ctx.strokeStyle = INK(0.45); ctx.lineWidth = 0.9; ctx.beginPath(); ctx.ellipse(2.5, -191, 10.5, 12.5, 0.05, -0.9, 1.9); ctx.stroke();
-    ctx.strokeStyle = INK(0.8); ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(5.5, -193); ctx.lineTo(10.6, -193.4); ctx.moveTo(5, -197); ctx.lineTo(11.2, -197.6); ctx.stroke();
-    if (beard) mark(ctx, strand(8, -182, Math.PI / 2 + 0.1, 20, t, 1, 0), taper(5), INK(0.6));
-    ctx.fillStyle = INK(0.88); ctx.beginPath(); ctx.ellipse(-1, -198, 11.5, 8.6, -0.2, 0, TAU); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(-8, -203); ctx.lineTo(-5, -222); ctx.lineTo(8, -219); ctx.lineTo(7, -203); ctx.closePath(); ctx.fill();   // 冠
+    mark(ctx, [12.4, -197.4, 13.3, -190, 10.8, -182.6, 4.2, -178.6, -0.6, -180], (tt) => 1.6 * Math.sin(Math.PI * Math.pow(tt, 0.8)) + 0.4, DK(0.7));
+    mark(ctx, [4.6, -197.4, 8.6, -199.8, 12.6, -197.6], nail(2.3), DK(0.9));                               // 眉：重
+    mark(ctx, [5.4, -193.2, 8.4, -194.2, 11.4, -193.6], (tt) => 1.3 * (1 - tt * 0.5) + 0.3, DK(0.9));
+    ctx.fillStyle = DK(0.96); ctx.beginPath(); ctx.arc(8.6, -193.4, 0.95, 0, TAU); ctx.fill();
+    mark(ctx, [12.8, -192, 13.8, -188, 12.2, -187.2], () => 0.8, DK(0.55));
+    if (beard) {                                                                                            // 须：唇上两撇，颔下一绺
+      mark(ctx, [9.4, -186.2, 12.6, -184.6, 15, -180.6], taper(1.7), DK(0.82));
+      const bd = strand(8, -182, Math.PI / 2 + 0.1, 23, t, 1, 0);
+      wet(ctx, bd, (tt) => 5.6 * (1 - tt * 0.8) + 0.4, w, 0.72 * a, 0.3 * a);
+      dry(ctx, dense(strand(6.6, -181, Math.PI / 2 + 0.22, 27, t + 1, 1.2, 0), 2), (tt) => 4 + 4 * tt, INK(0.6), 4, 9);
+    } else mark(ctx, [9.6, -185.6, 12.2, -184.8], () => 0.9, DK(0.5));
+    // 幞头：浓墨一团，脑后垂两脚
+    for (let i = 0; i < 2; i++) mark(ctx, strand(-10, -200 + i * 3, Math.PI - 0.2 + i * 0.5, 19, t * 2 + i, 2, 0.3), taper(3.2), INK(0.8));
+    ctx.fillStyle = INK(0.9); ctx.beginPath(); ctx.ellipse(-1, -198, 11.5, 8.6, -0.2, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-8, -203); ctx.lineTo(-5, -222); ctx.lineTo(8, -219); ctx.lineTo(7, -203); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = w.col('paper', 0.34 * a); ctx.lineWidth = 0.9; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-3.6, -218); ctx.lineTo(-5.6, -205); ctx.stroke(); ctx.beginPath(); ctx.ellipse(-1, -198, 9, 6, -0.2, 3.6, 4.8); ctx.stroke();
   }
   S.parts = { ladyHead, manHead };
 
@@ -553,7 +582,7 @@
     const t = env.t + (o.ph || 0), s = o.s || 1, f = o.face || -1, a = o.alpha == null ? 1 : o.alpha;
     if (o._wave) o._wave *= 0.975;
     const wind = 0.65 + 0.35 * Math.sin(t * 0.7) + (o._wave || 0) * 1.6;
-    const INK = (v) => w.ink(v * a), RED = (v) => w.col('red', v * a), BLUE = (v) => w.col('blue', v * a), WHITE = (v) => w.col('white', v * a), PAPER = (v) => w.col('paper', v * a);
+    const INK = (v) => w.ink(v * a), RED = (v) => w.col('red', v * a), WHITE = (v) => w.col('white', v * a), PAPER = (v) => w.col('paper', v * a);
     ctx.save();
     ctx.translate(x, y + Math.sin(t * 1.1) * (o.float ? 7 : 1.5));
     ctx.rotate(o.rot || 0); ctx.scale(s * f, s);
@@ -564,42 +593,49 @@
       for (let j = 0; j < 3; j++) { const r = 34 + j * 26 + ((t * 9) % 26); ctx.beginPath(); ctx.ellipse(-4, 6, r, r * 0.16, 0, 0, TAU); ctx.globalAlpha = clamp(1 - r / 120, 0, 1); ctx.stroke(); }
       ctx.globalAlpha = 1;
     }
-    // 披帛：几条长带，向身后扬起
+    // 披帛：一笔淡彩拖出去，起处浓、梢上淡，当中一根兰叶线提神
     const nr = o.ribbons == null ? 4 : o.ribbons;
     for (let i = 0; i < nr; i++) {
       const u = nr > 1 ? i / (nr - 1) : 0.5;
       const pp = strand(-10 - u * 6, -198 + u * 62, Math.PI - 0.5 + u * 0.78, 150 + (i % 2) * 70 + u * 40, t * 1.9 + i * 1.7, (22 + i * 5) * wind, -0.16 + u * 0.3);
-      mark(ctx, pp, (tt) => (15 - i * 1.6) * Math.pow(Math.sin(Math.PI * Math.pow(tt * 0.92 + 0.04, 0.6)), 0.8) + 0.6, i % 2 ? BLUE(0.3) : RED(0.26));
-      mark(ctx, pp, taper(1.2), INK(0.26));
+      wet(ctx, pp, (tt) => (15 - i * 1.6) * Math.pow(Math.sin(Math.PI * Math.pow(tt * 0.92 + 0.04, 0.6)), 0.8) + 0.6, w, 0.4 * a, 0.1 * a, i % 2 ? 'blue' : 'red');
+      mark(ctx, pp, orchid(1.7), INK(0.3));
     }
     // 曳地的裙裾
     for (let i = 0; i < 4; i++) {
       const pp = strand(-20, -20 + i * 6, Math.PI - 0.03 - i * 0.07, 118 + i * 24, t * 1.6 + i, 8 * wind, -0.02);
       mark(ctx, pp, taper(27 - i * 5), WHITE(0.78));
-      mark(ctx, pp, taper(1.5), INK(0.36));
+      mark(ctx, pp, orchid(2), INK(0.4));
     }
-    // 裙
+    // 裙：留白；背侧与裙脚淡墨渲染
     ctx.beginPath();
     ctx.moveTo(-13, -150); ctx.bezierCurveTo(-22, -100, -40, -42, -54, -2); ctx.quadraticCurveTo(-18, 7, 25, 0); ctx.bezierCurveTo(19, -50, 15, -100, 12, -150); ctx.closePath();
     ctx.fillStyle = WHITE(0.92); ctx.fill();
-    ctx.save(); ctx.clip(); softDot(ctx, -40, -34, 54, INK(0.2), INK(0)); softDot(ctx, 16, -60, 30, o.tint ? w.col(o.tint, 0.2 * a) : INK(0.08), INK(0)); ctx.restore();
-    mark(ctx, [-13, -150, -24, -100, -46, -30, -54, -2], swell(2.1), INK(0.62));
-    mark(ctx, [12, -150, 16, -92, 22, -32, 25, 0], swell(1.6), INK(0.5));
-    mark(ctx, [-5, -146, -13, -92, -28, -22], swell(1.3), INK(0.36));
-    mark(ctx, [4, -146, 3, -82, 8, -8], swell(1.1), INK(0.28));
+    ctx.save(); ctx.clip(); softDot(ctx, -44, -30, 58, INK(0.24), INK(0)); softDot(ctx, -8, 6, 40, INK(0.14), INK(0)); softDot(ctx, 16, -60, 30, o.tint ? w.col(o.tint, 0.2 * a) : INK(0.08), INK(0)); ctx.restore();
+    // 衣纹：背后一笔钉头鼠尾直落到底，身前几笔兰叶描
+    mark(ctx, [-13, -150, -24, -100, -46, -30, -54, -2], nail(3.6), INK(0.76));
+    mark(ctx, [12, -150, 16, -92, 22, -32, 25, 0], orchid(2.4), INK(0.56));
+    mark(ctx, [-5, -146, -13, -92, -28, -22], orchid(2), INK(0.42));
+    mark(ctx, [4, -146, 3, -82, 8, -8], orchid(1.7), INK(0.34));
+    mark(ctx, [-9, -118, -22, -60, -40, -6], orchid(1.4), INK(0.28));
+    mark(ctx, [-54, -2, -30, 4, -4, 5, 25, 0], orchid(2), INK(0.46));
     // 后袖
     const bs = strand(-10, -196, Math.PI * 0.64, 84, t * 1.8, 6 * wind, 0.1);
-    mark(ctx, bs, (tt) => 12 + 16 * tt, WHITE(0.84)); mark(ctx, bs, swell(1.4), INK(0.4));
-    // 上身与腰带
+    mark(ctx, bs, (tt) => 12 + 16 * tt, WHITE(0.84)); mark(ctx, bs, orchid(2.2), INK(0.46));
+    // 上身、交领与腰带
     ctx.beginPath(); ctx.moveTo(-13, -150); ctx.lineTo(-16, -196); ctx.quadraticCurveTo(0, -207, 15, -196); ctx.lineTo(12, -150); ctx.closePath();
     ctx.fillStyle = o.tint ? w.col(o.tint, 0.5 * a) : WHITE(0.94); ctx.fill();
-    mark(ctx, [-16, -196, -14, -172, -13, -150], swell(1.5), INK(0.5));
-    mark(ctx, [-14, -152, 0, -149, 13, -152], () => 5.5, RED(0.66));
-    for (let i = 0; i < 2; i++) mark(ctx, strand(3 + i * 4, -150, Math.PI / 2 + 0.12 - i * 0.2, 74 - i * 14, t * 2 + i, 4 * wind, 0.03), taper(4.6), RED(0.5));
+    mark(ctx, [-16, -196, -14, -172, -13, -150], nail(2.2), INK(0.6));
+    mark(ctx, [-8, -201, 1, -186, 5, -170], nail(1.6), INK(0.62)); mark(ctx, [11, -200, 3, -188], taper(1.4), INK(0.5));
+    wet(ctx, [-14, -152, 0, -149, 13, -152], () => 5.5, w, 0.7 * a, 0.5 * a, 'red');
+    for (let i = 0; i < 2; i++) wet(ctx, strand(3 + i * 4, -150, Math.PI / 2 + 0.12 - i * 0.2, 74 - i * 14, t * 2 + i, 4 * wind, 0.03), taper(4.6), w, 0.6 * a, 0.2 * a, 'red');
     // 前袖：按姿势
     const arm = { stand: [10, -196, 26, -178, 35, -152, 31, -116], raise: [10, -196, 32, -204, 52, -224, 62, -246], reach: [10, -196, 36, -184, 60, -160, 78, -140], hide: [10, -196, 24, -206, 20, -222, 8, -224] }[o.pose || 'stand'];
-    mark(ctx, arm, (tt) => 11 + 19 * tt, WHITE(0.92)); mark(ctx, arm, swell(1.6), INK(0.52));
-    if (o.pose === 'raise' || o.pose === 'reach') { const n = arm.length; mark(ctx, strand(arm[n - 2], arm[n - 1], Math.PI / 2 + 0.3, 62, t * 2.2, 5 * wind, 0.05), (tt) => 22 * (1 - tt * 0.6), WHITE(0.8)); }
+    mark(ctx, arm, (tt) => 11 + 19 * tt, WHITE(0.92)); mark(ctx, arm, orchid(2.6), INK(0.6));
+    if (o.pose === 'raise' || o.pose === 'reach') {
+      const n = arm.length, hs = strand(arm[n - 2], arm[n - 1], Math.PI / 2 + 0.3, 62, t * 2.2, 5 * wind, 0.05);
+      mark(ctx, hs, (tt) => 22 * (1 - tt * 0.6), WHITE(0.8)); mark(ctx, hs, orchid(1.6), INK(0.36));
+    }
     // 颈、面
     ctx.save();
     if (o.back) { ctx.translate(3, 0); ctx.scale(-1, 1); ctx.translate(-3, 0); }           // 回眸：只把头转过去
@@ -609,43 +645,90 @@
     if (env.hit && !o.noHit) env.hit(x, y - 120 * s, 100 * s, () => { o._wave = 1; if (env.S.onSound) env.S.onSound('touch', {}); }, env.sec);
   };
 
-  /* 士人：宽袍大袖，头上一顶冠 */
+  /* 士人：宽袍大袖。袍是泼墨——淡墨铺底，背侧与袖底压浓，襟前留一道亮；线只几笔 */
   P.man = function (ctx, w, x, y, o, env) {
     const t = env.t + (o.ph || 0), s = o.s || 1, f = o.face || -1, a = o.alpha == null ? 1 : o.alpha, tone = o.tone == null ? 0.44 : o.tone;
     const INK = (v) => w.ink(v * a), WHITE = (v) => w.col('white', v * a);
     ctx.save(); ctx.translate(x, y); ctx.scale(s * f, s); ctx.rotate((o.lean || 0) + Math.sin(t * 0.7) * 0.008);
     softDot(ctx, 0, -70, 80, INK(0.1), INK(0));
     ctx.beginPath(); ctx.moveTo(-17, -168); ctx.bezierCurveTo(-26, -110, -34, -50, -40, 0); ctx.quadraticCurveTo(0, 8, 36, 0); ctx.bezierCurveTo(28, -60, 20, -120, 16, -168); ctx.closePath();
-    ctx.fillStyle = INK(tone); ctx.fill();
-    mark(ctx, [-17, -168, -28, -100, -40, 0], swell(2.4), INK(0.7)); mark(ctx, [16, -168, 24, -90, 36, 0], swell(1.8), INK(0.55));
-    mark(ctx, [-2, -160, -4, -80, -8, -4], swell(1.3), INK(0.4));
+    const gr = ctx.createLinearGradient(-38, 0, 36, 0);
+    gr.addColorStop(0, INK(tone * 1.2)); gr.addColorStop(0.5, INK(tone * 0.55)); gr.addColorStop(1, INK(tone * 0.9));
+    ctx.fillStyle = gr; ctx.fill();
+    ctx.save(); ctx.clip();
+    softDot(ctx, -36, -50, 46, INK(tone * 0.7), INK(0)); softDot(ctx, 26, -16, 40, INK(tone * 0.5), INK(0));
+    softDot(ctx, 2, -112, 26, w.col('paper', 0.3 * a), w.col('paper', 0));
+    ctx.restore();
+    mark(ctx, [-17, -168, -28, -100, -40, 0], nail(4.6), INK(0.86));                 // 背上一笔，自肩直落
+    mark(ctx, [16, -168, 24, -90, 36, 0], orchid(2.8), INK(0.66));
+    mark(ctx, [-2, -160, -4, -80, -8, -4], orchid(2), INK(0.5));
+    mark(ctx, [-40, 0, -14, 6, 12, 4, 36, 0], orchid(2.2), INK(0.55));
+    dry(ctx, dense([-27, -70, -32, -34, -37, -6], 4), () => 11, INK(0.34), 4, 3);    // 袍角几丝飞白
     const bs = [-12, -160, -30, -130, -38, -96, -30, -70];
-    mark(ctx, bs, (tt) => 14 + 22 * tt, INK(tone * 0.9)); mark(ctx, bs, swell(1.5), INK(0.55));
+    wet(ctx, bs, (tt) => 14 + 22 * tt, w, tone * 1.05 * a, tone * 0.6 * a); mark(ctx, bs, nail(2.6), INK(0.7));
     const arm = { stand: [12, -160, 28, -134, 30, -100, 22, -74], point: [12, -160, 36, -158, 60, -166, 80, -176], hold: [12, -160, 30, -150, 40, -170, 42, -196] }[o.pose || 'stand'];
-    mark(ctx, arm, (tt) => 14 + 20 * tt * (o.pose === 'stand' ? 1 : 0.5), INK(tone)); mark(ctx, arm, swell(1.6), INK(0.6));
-    mark(ctx, [-17, -128, 0, -124, 17, -128], () => 5, w.col('red', 0.5 * a));
+    wet(ctx, arm, (tt) => 14 + 20 * tt * (o.pose === 'stand' ? 1 : 0.5), w, tone * 1.15 * a, tone * 0.65 * a); mark(ctx, arm, orchid(2.6), INK(0.72));
+    mark(ctx, [-9, -168, 2, -150, 5, -134], () => 3.4, WHITE(0.9));                  // 交领：里衣一线白
+    mark(ctx, [-10, -168, 1, -150, 4, -134], nail(2), INK(0.86)); mark(ctx, [12, -168, 4, -152], taper(1.8), INK(0.7));
+    wet(ctx, [-17, -128, 0, -124, 17, -128], () => 5, w, 0.56 * a, 0.4 * a, 'red');
     manHead(ctx, w, t, a, o.beard !== false);
     ctx.restore();
   };
 
-  /* 马：几笔写意 */
+  /* 马：大写意。一大笔淡墨写出躯干（臀宽、腰收、胸阔），墨在臀与肩上积成两团浓的，脊背留一线亮；
+     鬃尾用浓墨枯笔，迎风往后甩；腿是几根劲线，蹄子焦墨一点 */
   P.horse = function (ctx, w, x, y, o, env) {
     const t = env.t + (o.ph || 0), s = o.s || 1, f = o.face || -1, walk = o.graze ? 0 : (o.walk == null ? 1 : o.walk), tone = o.tone || 0.5;
     const INK = (v) => w.ink(v);
     ctx.save(); ctx.translate(x, y + Math.abs(Math.sin(t * 5)) * 2 * walk); ctx.scale(s * f, s);
-    softDot(ctx, 0, -52, 70, INK(0.1), INK(0));
-    for (const [lx, ph] of [[-30, 0], [-18, 2.2], [24, 1.1], [34, 3.3]]) {          // 四蹄
-      const sw = Math.sin(t * 5 + ph) * 13 * walk, far = ph > 2;
-      mark(ctx, [lx, -42, lx + sw * 0.4, -22, lx + sw, 0], (tt) => 8 - 4.4 * tt, INK(far ? tone * 0.6 : tone * 1.2));
+    ctx.save(); ctx.scale(1, 0.3); softDot(ctx, 0, -4, 74, INK(0.14), INK(0)); ctx.restore();
+    const leg = (hx, hy, ph, far, fore) => {
+      const sw = Math.sin(t * 5 + ph) * 13 * walk, kx = hx + sw * 0.45 + (fore ? 1.5 : -3.5), ky = hy + 22, fx = hx + sw, fy = -2;
+      if (brushPath(ctx, [hx + (fore ? -2 : 3), hy - 16, hx, hy, kx, ky], (tt) => 17 - 12 * tt, null, null, true)) { ctx.fillStyle = INK(tone * (far ? 0.42 : 0.86)); ctx.fill(); }   // 大腿：一笔，上宽下尖
+      mark(ctx, [kx, ky - 3, (kx + fx) / 2 + (fore ? 1.6 : 2.6), (ky + fy) / 2, fx, fy - 3], nail(far ? 2.6 : 3.4), INK(far ? 0.46 : 0.88));
+      ctx.fillStyle = INK(far ? 0.5 : 0.94);
+      ctx.beginPath(); ctx.moveTo(fx - 2.4, fy - 3.8); ctx.lineTo(fx + 3.4, fy - 3.8); ctx.lineTo(fx + 4.6, fy + 1.4); ctx.lineTo(fx - 3.2, fy + 1.4); ctx.closePath(); ctx.fill();
+    };
+    leg(-28, -42, 2.2, true, false); leg(27, -44, 3.3, true, true);
+    // 尾：先一笔湿墨，再枯笔扫出去
+    const tail = strand(-48, -64, Math.PI * 0.68, 62, t * 3, 5 + 7 * walk, 0.12);
+    if (brushPath(ctx, tail, (tt) => 11 * (1 - tt * 0.75) + 1, null, null, true)) { ctx.fillStyle = INK(0.5); ctx.fill(); }
+    dry(ctx, dense(tail, 3), (tt) => 5 + 16 * tt, INK(0.84), 8, 3);
+    // 身
+    if (brushPath(ctx, [-52, -58, -38, -65, -14, -60, 8, -58, 28, -63, 45, -57], (tt) => 31 - 11 * Math.sin(Math.PI * tt) + 4 * tt, null, null, true)) {
+      ctx.fillStyle = INK(tone * 0.46); ctx.fill();
+      ctx.save(); ctx.clip();
+      softDot(ctx, -42, -50, 32, INK(tone * 1.0), INK(0));                           // 臀
+      softDot(ctx, 36, -50, 30, INK(tone * 1.05), INK(0));                           // 肩、胸
+      softDot(ctx, -4, -40, 22, INK(tone * 0.4), INK(0));                            // 腹下
+      softDot(ctx, -10, -76, 28, w.col('paper', 0.55), w.col('paper', 0));           // 脊背的亮
+      ctx.restore();
     }
-    mark(ctx, strand(-44, -58, Math.PI * 0.62, 50, t * 3, 4 + 6 * walk, 0.1), taper(8), INK(0.7));           // 尾
-    mark(ctx, [-44, -56, -14, -64, 22, -61, 42, -54], (tt) => 25 + 11 * Math.sin(Math.PI * tt), INK(tone));  // 身
-    const neck = o.graze ? [36, -58, 54, -38, 62, -16] : [34, -62, 50, -90, 60, -108];
-    mark(ctx, neck, (tt) => 19 - 8 * tt, INK(tone));
+    mark(ctx, [-50, -71, -26, -79, 6, -74, 30, -78], nail(3.2), INK(0.82));          // 脊线一笔
+    mark(ctx, [-32, -41, 0, -35, 32, -43], orchid(1.5), INK(0.42));                  // 腹线
+    // 颈、头
+    const neck = o.graze ? [36, -62, 54, -40, 62, -17] : [34, -66, 50, -92, 60, -109];
+    if (brushPath(ctx, neck, (tt) => 25 - 11 * tt, null, null, true)) {
+      ctx.fillStyle = INK(tone * 0.6); ctx.fill();
+      ctx.save(); ctx.clip(); softDot(ctx, neck[0] + 2, neck[1] + 4, 24, INK(tone * 0.8), INK(0)); ctx.restore();
+    }
     const nx = neck[4], ny = neck[5];
-    mark(ctx, o.graze ? [nx, ny, nx + 6, ny + 12, nx + 4, ny + 20] : [nx, ny, nx + 12, ny + 6, nx + 22, ny + 16], (tt) => 10 - 4 * tt, INK(tone * 1.1));
-    for (let i = 0; i < 5; i++) mark(ctx, strand(lerp(neck[0], nx, i / 4) - 3, lerp(neck[1], ny, i / 4) - 4, Math.PI * (o.graze ? 0.9 : 0.75), 15, t * 3 + i, 3, 0.1), taper(4), INK(0.75));
-    mark(ctx, [-44, -62, -14, -72, 22, -70, 40, -62], swell(2), INK(0.7));
+    const face = o.graze ? [nx, ny, nx + 6, ny + 12, nx + 4, ny + 21] : [nx, ny, nx + 12, ny + 6, nx + 23, ny + 17];
+    if (brushPath(ctx, face, (tt) => 12 - 5.5 * tt, null, null, true)) { ctx.fillStyle = INK(tone * 0.66); ctx.fill(); }
+    mark(ctx, o.graze ? [nx - 3, ny - 2, nx + 3, ny + 11, nx + 1, ny + 21] : [nx - 2, ny - 4, nx + 12, ny + 2, nx + 25, ny + 14], nail(2.6), INK(0.86));   // 鼻梁一笔
+    mark(ctx, o.graze ? [nx + 6, ny + 2, nx + 9, ny + 12] : [nx + 4, ny + 8, nx + 14, ny + 14], taper(1.6), INK(0.5));                                    // 腮
+    ctx.fillStyle = INK(0.9);
+    ctx.beginPath(); leafPath(ctx, nx - 2, ny - 3, -Math.PI / 2 - 0.25, 13, 3.4, 0); leafPath(ctx, nx + 3, ny - 2, -Math.PI / 2 + 0.2, 11, 3, 0); ctx.fill();   // 耳
+    ctx.beginPath(); ctx.arc(face[2] - 1, face[3] - 3.4, 1.6, 0, TAU); ctx.arc(face[4] - 1.5, face[5] - 2.5, 1.1, 0, TAU); ctx.fill();                      // 眼、鼻孔
+    // 鬃：浓墨，一绺一绺往后上方甩出去，梢上飞白
+    for (let i = 0; i < 10; i++) {
+      const u = i / 9, mx = lerp(neck[0], nx, u) - 6 + u * 3, my = lerp(neck[1], ny, u) - 7;
+      const st = strand(mx, my, Math.PI * (o.graze ? 1.02 : 1.1) - u * 0.25, 13 + (i % 3) * 5 + 7 * walk, t * 3.4 + i, 2 + 4 * walk, 0.26);
+      mark(ctx, st, taper(3.8), INK(0.86));
+      dry(ctx, dense(st, 2), (tt) => 2 + 9 * tt, INK(0.66), 4, i + 1);
+    }
+    if (!o.graze) mark(ctx, strand(nx + 2, ny - 2, 0.5, 13, t * 3, 2, 0.4), taper(4), INK(0.84));                                                          // 额前一绺
+    leg(-18, -42, 0, false, false); leg(36, -44, 1.1, false, true);
     ctx.restore();
   };
 

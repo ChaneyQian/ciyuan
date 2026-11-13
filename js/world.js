@@ -120,6 +120,7 @@
     this.W = 1; this.H = 1;
     this.night = false; this.nightK = 0;
     this.season = '';          // '' | 春 夏 秋 冬
+    this.sea = { '春': 0, '夏': 0, '秋': 0, '冬': 0 };   // 四时各占几分：换季时此消彼长，草木山水据此渐变
     this.tint = [1, 1, 1];
     this.wind = 0;             // 当前风力（带方向，-1..1 左右）
     this.gust = 0;
@@ -137,6 +138,25 @@
     return 'rgba(' + r + ',' + g + ',' + b + ',' + (a == null ? 1 : a) + ')';
   };
   World.prototype.ink = function (a) { return this.col('ink', a); };
+  /* 四时之间取中：给出春夏秋冬各自的数，按当下各季的分量调和；没有时令的那一份取 base */
+  World.prototype.by = function (sp, su, au, wi, base) {
+    const s = this.sea, rest = Math.max(0, 1 - s['春'] - s['夏'] - s['秋'] - s['冬']);
+    return s['春'] * sp + s['夏'] * su + s['秋'] * au + s['冬'] * wi + rest * base;
+  };
+  /* 同上，调和的是颜色（调色盘里的名字） */
+  World.prototype.hue = function (sp, su, au, wi, base, a) {
+    const s = this.sea, k = this.nightK, names = [sp, su, au, wi, base];
+    const wt = [s['春'], s['夏'], s['秋'], s['冬'], 0];
+    wt[4] = Math.max(0, 1 - wt[0] - wt[1] - wt[2] - wt[3]);
+    let r = 0, g = 0, b = 0, tot = 0;
+    for (let i = 0; i < 5; i++) {
+      if (wt[i] <= 0) continue;
+      const c = PAL[names[i]] || PAL.ink;
+      r += wt[i] * lerp(c[0][0], c[1][0], k); g += wt[i] * lerp(c[0][1], c[1][1], k); b += wt[i] * lerp(c[0][2], c[1][2], k); tot += wt[i];
+    }
+    tot = tot || 1;
+    return 'rgba(' + Math.round(r / tot) + ',' + Math.round(g / tot) + ',' + Math.round(b / tot) + ',' + (a == null ? 1 : a) + ')';
+  };
 
   World.prototype.emit = function (type, data) { this.events.push(Object.assign({ type }, data || {})); };
   World.prototype.stir = function (x, y, vx, vy, r) { this.fluid.splat(x, y, vx, vy, null, r); };
@@ -229,6 +249,7 @@
     const T = { '春': [1.0, 1.004, 0.985], '夏': [0.982, 1.004, 0.972], '秋': [1.012, 0.984, 0.946], '冬': [0.965, 0.984, 1.004] }[this.season] || [1, 1, 1];
     for (let i = 0; i < 3; i++) this.tint[i] += (T[i] - this.tint[i]) * Math.min(1, dt * 0.8);
     this.fluid.tint = this.tint;
+    for (const k in this.sea) this.sea[k] += clamp((this.season === k ? 1 : 0) - this.sea[k], -dt / 3.6, dt / 3.6);
 
     if (this.clearing > 0) { this.clearing -= dt; this.fluid.fade(Math.exp(-dt * 3.2)); }
 
@@ -318,22 +339,28 @@
       }
       e.cache = {};
     },
-    render(e, w, night) {
+    /* 这座山的几重轮廓（墨山与四时的颜色层都按它来画，才能严丝合缝） */
+    shape(e) {
       const pad = 40, cw = Math.ceil(e.mw * 1.5) + pad * 2, chh = Math.ceil(e.mh * 1.5) + pad * 2;
-      const c = document.createElement('canvas');
-      c.width = cw; c.height = chh;
-      const g = c.getContext('2d');
-      const ink = night ? '216,218,206' : '34,32,30';
-      const rr = mulberry(e.seed + 7);
-      for (const L of e.layers) {
-        const lw = e.mw * L.sc, x0 = (cw - lw) / 2 + L.dx * 0.5, base = chh - pad + L.dy * 0.4;
+      const layers = e.layers.map((L) => {
+        const lw = e.mw * L.sc;
         const ridge = (u) => {
           let h = 0;
           for (const p of L.peaks) { const d = (u - p.c) / p.s; h = Math.max(h, p.a * Math.exp(-d * d)) + 0.12 * p.a * Math.exp(-d * d * 0.3); }
           h += (noise1(u * 14 + L.seed) - 0.5) * 0.09 + (noise1(u * 47 + L.seed) - 0.5) * 0.03;
           return Math.max(0, h) * Math.pow(Math.sin(Math.PI * clamp(u, 0, 1)), 0.7);
         };
-        const H0 = e.mh * L.sc * 0.82;
+        return { L, lw, x0: (cw - lw) / 2 + L.dx * 0.5, base: chh - pad + L.dy * 0.4, H0: e.mh * L.sc * 0.82, ridge };
+      });
+      return { cw, chh, layers };
+    },
+    render(e, w, night) {
+      const S = this.shape(e), c = document.createElement('canvas');
+      c.width = S.cw; c.height = S.chh;
+      const g = c.getContext('2d');
+      const ink = night ? '216,218,206' : '34,32,30';
+      const rr = mulberry(e.seed + 7);
+      for (const { L, lw, x0, base, H0, ridge } of S.layers) {
         for (let x = 0; x < lw; x += 2) {
           const u = x / lw, rh = ridge(u), top = base - rh * H0, depth = (base - top) * 0.95 + 26;
           const al = L.alpha * ease(rh / 0.22);       // 山脚渐隐入纸，不留硬边
@@ -360,13 +387,53 @@
       }
       return c;
     },
+    /* 四时的山色：春山淡冶（新绿，山脚点桃花）· 夏山苍翠（浓绿，脊上苔点）· 秋山明净（赭黄，点丹枫）· 冬山惨淡（顶上积雪，留白） */
+    dress(e, night, se) {
+      const S = this.shape(e), c = document.createElement('canvas');
+      c.width = S.cw; c.height = S.chh;
+      const g = c.getContext('2d'), rr = mulberry(e.seed + 31 + se.charCodeAt(0));
+      const C = { '春': night ? '150,208,150' : '104,150,88', '夏': night ? '110,190,170' : '38,92,82', '秋': night ? '255,170,96' : '198,120,48', '冬': night ? '244,246,250' : '253,253,251' }[se];
+      const stops = { '春': [[0, 0], [0.3, 0.3], [0.85, 0]], '夏': [[0, 0.4], [0.55, 0.2], [1, 0]], '秋': [[0, 0.34], [0.45, 0.2], [1, 0]], '冬': [[0, 0.96], [0.2, 0.6], [0.46, 0]] }[se];
+      for (const { L, lw, x0, base, H0, ridge } of S.layers) {
+        const k = 0.45 + L.alpha * 1.6;
+        for (let x = 0; x < lw; x += 2) {
+          const u = x / lw, rh = ridge(u), top = base - rh * H0, depth = (base - top) * 0.95 + 26, al = ease(rh / 0.22) * k;
+          if (al < 0.01) continue;
+          const gr = g.createLinearGradient(0, top, 0, top + depth);
+          for (const st of stops) gr.addColorStop(st[0], 'rgba(' + C + ',' + Math.min(1, st[1] * al) + ')');
+          g.fillStyle = gr;
+          g.fillRect(x0 + x, top, 2.4, depth);
+        }
+        // 点：桃花、苔、丹枫
+        const dot = { '春': night ? '255,170,184' : '226,128,146', '夏': night ? '200,220,200' : '26,48,40', '秋': night ? '255,110,84' : '186,48,34' }[se];
+        if (!dot) continue;
+        g.fillStyle = 'rgba(' + dot + ',' + (se === '夏' ? 0.5 : 0.62) + ')';
+        const m = (lw / (se === '夏' ? 9 : 15)) | 0;
+        for (let i = 0; i < m; i++) {
+          const u = 0.08 + rr() * 0.84, hx = ridge(u);
+          if (hx < 0.16) continue;
+          const d = se === '夏' ? rr() * 0.16 : se === '春' ? 0.45 + rr() * 0.4 : 0.1 + rr() * 0.5;      // 苔在脊上，桃花在山脚，丹枫在山腰
+          const x = x0 + u * lw, y = base - hx * H0 * (1 - d) + 3;
+          for (let q = 0; q < 3; q++) { g.beginPath(); g.ellipse(x + (rr() - 0.5) * 9, y + (rr() - 0.5) * 6, 1.4 + rr() * 1.8, 1 + rr() * 1.4, rr() * 3, 0, TAU); g.fill(); }
+        }
+      }
+      return c;
+    },
     draw(e, ctx, w) {
       const night = w.nightK > 0.5, key = night ? 'n' : 'd';
       if (!e.cache[key]) e.cache[key] = this.render(e, w, night);
-      const c = e.cache[key], g = ease(e.age / 3.2);
-      ctx.globalAlpha *= g * (night ? 0.8 : 1);
+      const c = e.cache[key], g = ease(e.age / 3.2), a0 = ctx.globalAlpha * g * (night ? 0.8 : 1);
       // 山脚大致落在落字处之下
-      ctx.drawImage(c, e.x - c.width / 2, e.y - c.height + e.mh * 0.62 + 40 + (1 - g) * 14);
+      const x = e.x - c.width / 2, y = e.y - c.height + e.mh * 0.62 + 40 + (1 - g) * 14;
+      ctx.globalAlpha = a0;
+      ctx.drawImage(c, x, y);
+      for (const se in w.sea) {
+        const k = w.sea[se];
+        if (k < 0.01) continue;
+        if (!e.cache[key + se]) e.cache[key + se] = this.dress(e, night, se);
+        ctx.globalAlpha = a0 * k;
+        ctx.drawImage(e.cache[key + se], x, y);
+      }
     }
   };
 
@@ -688,6 +755,8 @@
       }
       w.dye(e.x, e.y, [0.05, 0, 0.14], 90);
       e.tick = 0;
+      e.bits = [];
+      for (let i = 0; i < 16; i++) e.bits.push({ u: e.rng() * 2 - 1, j: (e.rng() * 11) | 0, ph: e.rng() * TAU, s: 0.7 + e.rng() * 0.7 });
     },
     update(e, dt, w) {
       e.tick -= dt;
@@ -710,6 +779,21 @@
         }
         ctx.stroke();
       }
+      // 四时：水面上漂着的东西，随波起伏，慢慢往下游去
+      const sp = w.sea['春'], su = w.sea['夏'], au = w.sea['秋'], wi = w.sea['冬'], any = Math.min(1, sp + su + au + wi);
+      if (any < 0.02) return;
+      ctx.fillStyle = w.hue('pink', 'leaf', 'orange', 'white', 'white', 0.86 * any * g);
+      const rx = w.by(4.6, 3.4, 7.5, 15, 0), ry = w.by(2.6, 3, 2.8, 3.6, 0);
+      ctx.beginPath();
+      for (const b of e.bits) {
+        const l = e.lines[b.j], u = ((b.u + w.t * 0.012 * (1 - wi * 0.8) + 1) % 2 + 2) % 2 - 1, edge = Math.cos(u * Math.PI / 2);
+        if (edge < 0.2) continue;
+        const x = e.x + u * e.half, y = e.y + l.dy * (0.6 + 0.4 * edge) + Math.sin(x * l.fr + l.ph - w.t * l.sp) * l.amp - 1.5;
+        ctx.moveTo(x + rx * b.s, y);
+        ctx.ellipse(x, y, rx * b.s, ry * b.s, Math.sin(w.t * 0.5 + b.ph) * 0.5 * (1 - wi), 0, TAU);
+      }
+      ctx.fill();
+      if (wi > 0.3 && w.nightK < 0.5) { ctx.strokeStyle = w.ink(0.2 * wi); ctx.lineWidth = 0.7; ctx.stroke(); }
     }
   };
 })();

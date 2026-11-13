@@ -320,6 +320,22 @@
     wine: (t, p) => { bell(freq(14), t, { qing: true, vol: 0.1, pan: p }); phrase('pipa', [[7, 0.2], [9, 0.2], [7, 0.4], [4, 0.6]], t + 0.25, { vol: 0.26, pan: p }); },
     spring: (t, p) => { for (let k = 0; k < 6; k++) pluck('zheng', freq(14 - k), t + k * 0.24 + R(0, 0.05), { vol: 0.2, pan: p + R(-0.2, 0.2) }); },
     ice: (t, p) => { for (let k = 0; k < 3; k++) bell(freq(20 - k * 3), t + k * 0.5, { qing: true, vol: 0.09, pan: p }); noiseSweep(t + 1.2, 0.25, 3000, 6000, 2000, 2, 0.08, p); },
+    dew: (t, p) => { for (let k = 0; k < 3; k++) bell(freq(18 + k * 2), t + k * 0.55, { qing: true, vol: 0.07, pan: p + R(-0.3, 0.3) }); },
+    sea: (t, p) => { noiseSweep(t, 3.6, 200, 900, 240, 0.7, 0.3, p); gliss(t + 0.4, 0, 9, 0.11, 0.3, p); },
+    city: (t, p) => { bell(freq(-5), t, { vol: 0.3, pan: p, long: 1.4 }); drum(t + 0.9, { vol: 0.4, f: 80, pan: p }); },
+    leaf: (t, p) => phrase('zheng', [[9, 0.3], [7, 0.3], [5, 0.6]], t, { vol: 0.28, pan: p }),
+    phoenix: (t, p) => { phrase('di', [[4, 0.2], [7, 0.2], [9, 0.3], [12, 0.9]], t, { vol: 0.14, pan: p }); gliss(t + 0.2, 5, 16, 0.06, 0.24, p); },
+    egret: (t, p) => phrase('xiao', [[9, 0.9], [7, 1.6]], t, { vol: 0.12, pan: p }),
+    bee: (t, p) => tremolo('pipa', 12, t, 0.9, 0.12, p),
+    shrimp: (t, p) => { for (let k = 0; k < 4; k++) pluck('zheng', freq(12 + [0, 2, 1, 4][k]), t + k * 0.16, { vol: 0.2, pan: p + R(-0.2, 0.2) }); },
+    tiger: (t, p) => { drum(t, { vol: 0.8, f: 60, pan: p }); noiseSweep(t, 1.6, 240, 110, 70, 0.6, 0.4, p, 'lowpass'); pluck('qin', freq(-7), t + 0.1, { vol: 0.7, pan: p, slide: -3 }); },
+    ox: (t, p) => phrase('di', [[4, 0.3], [5, 0.2], [4, 0.5], [2, 0.3], [4, 0.9]], t, { vol: 0.12, pan: p, vib: 0.03 }),
+    ape: (t, p) => { flute(freq(14), t, 1.3, { xiao: true, vol: 0.12, fall: -5, pan: p }); flute(freq(12), t + 1.6, 1.7, { xiao: true, vol: 0.1, fall: -7, pan: p }); },
+    qin: (t, p) => phrase('qin', [[0, 0.8], [4, 0.6], [2, 0.6], [-1, 1.8]], t, { vol: 0.6, pan: p, vib: 1 }),
+    book: (t, p) => { noiseSweep(t, 0.3, 1800, 4000, 2400, 1.2, 0.07, p); pluck('qin', freq(2), t + 0.3, { vol: 0.5, pan: p, vib: 1 }); },
+    pen: (t, p) => { pluck('qin', freq(4), t, { vol: 0.5, pan: p, slide: -2 }); woodfish(t + 0.5, 420, 0.14); },
+    tea: (t, p) => { for (let k = 0; k < 3; k++) pluck('zheng', freq(9 + k * 2), t + k * 0.28, { vol: 0.2, pan: p }); bell(freq(16), t + 1, { qing: true, vol: 0.08, pan: p }); },
+    incense: (t, p) => { bell(freq(9), t, { qing: true, vol: 0.1, pan: p }); phrase('xiao', [[2, 2.2]], t + 0.4, { vol: 0.1, pan: p }); },
     tears: (t, p) => { for (let k = 0; k < 3; k++) pluck('zheng', freq(12 - k * 2), t + k * 0.7, { vol: 0.24, pan: p, bend: -2 }); }
   };
 
@@ -381,7 +397,7 @@
     splash: (t, d) => noiseSweep(t, 0.5, 700, 2400, 900, 0.8, 0.14, d.pan)
   };
   // 这些灵一出世就自己发声（world.emit），不必再奏一遍
-  const SELF = { boat: 1, tower: 1, lantern: 1, fire: 1, butterfly: 1 };
+  const SELF = { boat: 1, tower: 1, lantern: 1, fire: 1, butterfly: 1, flute: 1 };
 
   A.play = function (type, data) {
     if (!A.enabled || !A.ready) return;

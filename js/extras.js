@@ -6,7 +6,7 @@
   'use strict';
   const MS = window.MS, Kinds = MS.Kinds;
   const { clamp, lerp, ease, easeOut, softDot, leafPath, noise1, TAU } = MS.util;
-  const { mark, strand, swell, taper } = MS.ink;
+  const { mark, strand, swell, taper, nail, orchid, wet, dry, dense } = MS.ink;
   const sway = (w, ph, sp) => Math.sin(w.t * (sp || 1) + ph) * (0.25 + Math.abs(w.wind) * 0.5) + w.wind * 1.6;
 
   /* ================= 林：几株杂树，点叶成荫 ================= */
@@ -33,11 +33,13 @@
         mark(ctx, [bx + t.lean * t.h * 0.4, e.base - t.h * 0.56 * g, tx + 30, ty + t.h * 0.12], taper(3), w.ink(t.tone + 0.2));
         const lg = ease((g - 0.5) / 0.5);
         if (lg <= 0) continue;
-        softDot(ctx, tx, ty + 6, t.rad * 1.3 * lg, w.ink(t.tone * 0.42), w.ink(0));
-        softDot(ctx, tx, ty + 6, t.rad * lg, w.col('leaf', w.season === '秋' ? 0.04 : 0.2), w.col('leaf', 0));
-        ctx.fillStyle = w.season === '秋' ? w.col('orange', 0.5) : w.ink(t.tone + 0.12);
+        // 四时：春林新绿而疏，夏林浓荫，秋林丹黄，冬林落尽、枝头有雪
+        const LA = w.by(0.72, 1.12, 0.92, 0.14, 1), wi = w.sea['冬'];
+        softDot(ctx, tx, ty + 6, t.rad * 1.3 * lg, w.ink(t.tone * 0.42 * (1 - wi * 0.7)), w.ink(0));
+        softDot(ctx, tx, ty + 6, t.rad * lg, w.hue('leaf', 'green', 'orange', 'white', 'leaf', w.by(0.26, 0.3, 0.2, 0.34, 0.2)), w.hue('leaf', 'green', 'orange', 'white', 'leaf', 0));
+        ctx.fillStyle = w.hue('leaf', 'ink', 'orange', 'ink', 'ink', w.by(0.72, t.tone + 0.22, 0.64, 0.5, t.tone + 0.12));
         ctx.beginPath();
-        for (const d of t.dabs) leafPath(ctx, tx + d[0] * t.rad * lg, ty + 6 + d[1] * t.rad * lg, d[2] + sw * 0.03, d[3] * lg, 2.6, 0.1);
+        for (const d of t.dabs) leafPath(ctx, tx + d[0] * t.rad * lg, ty + 6 + d[1] * t.rad * lg, d[2] + sw * 0.03, d[3] * lg * LA, 2.6, 0.1);
         ctx.fill();
       }
     }
@@ -63,8 +65,8 @@
         if (g <= 0) continue;
         const bx = e.x + c.dx, by = e.y;
         for (const l of c.leaves) mark(ctx, strand(bx, by, l.a + sway(w, l.ph, 1.2) * 0.05, l.len * g, l.ph, 4, l.droop + (l.a > -Math.PI / 2 ? 0.25 : -0.25)), swell(5.2), w.ink(l.tone));
-        const fg = ease((g - 0.6) / 0.4);
-        if (fg <= 0) continue;
+        const fg = ease((g - 0.6) / 0.4) * w.by(1, 0, 0.4, 0, 1);      // 兰开在春（秋兰偶有），其余时候只有叶
+        if (fg <= 0.02) continue;
         for (const s of c.stalks) {
           const pp = strand(bx, by, s.a + sway(w, s.ph, 1.4) * 0.04, s.len * g, s.ph, 2, 0);
           mark(ctx, pp, taper(2.2), w.col('leaf', 0.7));
@@ -283,10 +285,12 @@
     },
     update(e, dt, w) {
       e.tk -= dt;
-      if (e.tk <= 0) { e.tk = 0.5 + Math.random() * 1.1; const b = e.b[(Math.random() * e.b.length) | 0]; if (b.tx != null) w.drift(b.tx + (Math.random() - 0.5) * 70, b.ty, 'leaf', Math.random() < 0.65 ? 'red' : 'orange'); }
+      if (e.tk <= 0 && w.by(0, 0, 1, 0, 1) > 0.5) { e.tk = 0.5 + Math.random() * 1.1; const b = e.b[(Math.random() * e.b.length) | 0]; if (b.tx != null) w.drift(b.tx + (Math.random() - 0.5) * 70, b.ty, 'leaf', Math.random() < 0.65 ? 'red' : 'orange'); }
     },
     draw(e, ctx, w) {
-      const g = ease(e.age / 3), sw = sway(w, e.seed % 7, 0.7), H = e.h * g;
+      // 四时：春叶新绿，夏叶浓绿，秋（与平日）一树丹红，冬叶落尽、只余几片
+      const g = ease(e.age / 3), sw = sway(w, e.seed % 7, 0.7), H = e.h * g, LA = w.by(0.72, 1, 1, 0.16, 1);
+      const c1 = w.hue('leaf', 'green', 'red', 'red', 'red', 0.68), c2 = w.hue('yellow', 'leaf', 'orange', 'orange', 'orange', 0.66);
       const tx = e.x + e.lean * H + sw * 4, ty = e.by - H;
       softDot(ctx, e.x, e.by - 30, 90, w.ink(0.1), w.ink(0));
       mark(ctx, [e.x, e.by, e.x + e.lean * H * 0.2, e.by - H * 0.38, e.x + e.lean * H * 0.72, e.by - H * 0.74, tx, ty], (t) => 17 - 13 * t, w.ink(0.74));
@@ -298,14 +302,14 @@
         b.tx = ex; b.ty = ey;
         if (lg <= 0) continue;
         const R = 62 * lg;
-        softDot(ctx, ex, ey, R * 1.5, w.col('red', 0.2), w.col('red', 0));
+        softDot(ctx, ex, ey, R * 1.5, w.hue('leaf', 'green', 'red', 'white', 'red', w.by(0.12, 0.12, 0.2, 0.16, 0.2)), w.hue('leaf', 'green', 'red', 'white', 'red', 0));
         for (let pass = 0; pass < 2; pass++) {
-          ctx.fillStyle = pass ? w.col('orange', 0.66) : w.col('red', 0.68);
+          ctx.fillStyle = pass ? c2 : c1;
           ctx.beginPath();
           for (const d of b.dabs) {
             if (d[4] !== !!pass) continue;
             const x = ex + d[0] * R, y = ey + d[1] * R;
-            for (let j = -1; j <= 1; j++) leafPath(ctx, x, y, d[2] + j * 0.8 + sw * 0.04, d[3] * lg, 2.8, 0);     // 三裂的叶
+            for (let j = -1; j <= 1; j++) leafPath(ctx, x, y, d[2] + j * 0.8 + sw * 0.04, d[3] * lg * LA, 2.8, 0);     // 三裂的叶
           }
           ctx.fill();
         }
@@ -443,4 +447,8 @@
   Kinds.rock = still(22, 'land', 'rock', { w: 320, h: 280, dy: 110 });
   /* 旗 */
   Kinds.banner = still(64, 'ground', 'banner', { h: 280, c: 'red', dy: 120 });
+  /* 城：一带城墙，一座门楼（卷二《琵琶行》里的京城） */
+  Kinds.city = still(24, 'land', 'city', { w: 760, dy: 130 });
+  /* 猿：枯枝上挂着一只 */
+  Kinds.ape = still(66, 'high', 'ape', { dy: 0 });
 })();
