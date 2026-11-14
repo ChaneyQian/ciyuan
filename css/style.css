@@ -97,7 +97,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 
 /* —— 字钮 —— */
 .dock { position: fixed; left: 0; right: 0; bottom: 14px; display: flex; flex-direction: column; align-items: center; gap: 9px; pointer-events: none; animation: rise 1.6s .3s var(--ease) both; }
-.chars { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px 3px; max-width: min(1500px, calc(100vw - 250px)); pointer-events: auto; }   /* 字多了：钮小一号，排宽一些；两边让出撤销与落款 */
+.chars { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px 3px; max-width: min(1500px, calc(100vw - 310px)); pointer-events: auto; }   /* 字多了：钮小一号，排宽一些；两边让出撤销与落款 */
 .chars .grp { display: flex; gap: 4px; padding: 0 6px; position: relative; }
 .chars .grp + .grp::before { content: ""; position: absolute; left: -3px; top: 22%; bottom: 22%; width: 1px; background: rgba(var(--ink), .16); }
 .chars button {
@@ -268,6 +268,7 @@ body.scrolling #sbar { display: flex; }
   opacity: 0; visibility: hidden; transition: opacity .6s, visibility 0s .6s;
   cursor: pointer;
 }
+#shint:not(.show) { pointer-events: none; }
 #shint.show { opacity: 1; visibility: visible; transition: opacity .6s; }
 #shint .how { text-align: center; color: #f3ebdb; transform: translateY(8px); transition: transform .8s var(--ease); }
 #shint.show .how { transform: none; }
@@ -342,7 +343,7 @@ body.scrolling .tools button[data-tip]::after { top: auto; bottom: calc(100% + 8
 #side button[data-tip]::after { right: auto; left: 0; top: auto; bottom: calc(100% + 8px); }
 
 /* —— 左下角：撤销与图层 —— */
-#side { position: fixed; left: 18px; bottom: 16px; z-index: 5; display: grid; grid-template-columns: auto auto; gap: 6px; animation: rise 1.6s .4s var(--ease) both; }
+#side { position: fixed; left: 16px; bottom: 16px; z-index: 5; display: grid; grid-template-columns: auto auto; gap: 6px; animation: rise 1.6s .4s var(--ease) both; }
 #side button, #side .lay {
   font-family: var(--text); font-size: 12px; letter-spacing: .14em; text-indent: .14em; line-height: 1; white-space: nowrap;
   padding: 6px 9px 7px; border-radius: 99px; border: 1px solid rgba(var(--ink), .26); color: rgba(var(--ink), .78);
@@ -354,11 +355,20 @@ body.night #side button, body.night #side .lay { background: rgba(8, 11, 16, .34
 #side button:hover { border-color: rgba(var(--ink), .6); color: rgba(var(--ink), .95); }
 #side button:disabled { opacity: .36; cursor: default; }
 #side #lay-bg[aria-pressed="true"] { border-color: rgba(var(--ink), .5); background: rgba(var(--ink), .1); }
+#side #lay-bg { grid-column: span 2; }
+#side #btn-box[aria-pressed="true"] { background: var(--cinnabar); border-color: var(--cinnabar); color: #f8efe0; }
+body.boxing #stage { cursor: crosshair; }
+/* 按住字钮拖到画里：跟着笔尖走的那个字 */
+#ghost { position: fixed; z-index: 25; left: 0; top: 0; width: 64px; height: 64px; margin: -32px 0 0 -32px; display: none; place-items: center; pointer-events: none;
+  font-family: var(--brush); font-size: 38px; line-height: 1; color: rgba(var(--ink), .5); border: 1.4px dashed rgba(var(--ink), .3); border-radius: 50%; }
+#ghost.show { display: grid; }
+#ghost.ok { color: var(--cinnabar); border-color: var(--cinnabar); }
+.chars button { touch-action: pan-x; }
 body.scrolling #side { display: none; }
 
 /* —— 首次引导：蒙版上给真实的按键开窗，每个键一条引线、一句说明 —— */
-#guide { position: fixed; inset: 0; z-index: 30; opacity: 0; visibility: hidden; transition: opacity .5s, visibility 0s .5s; cursor: pointer; }
-#guide.show { opacity: 1; visibility: visible; transition: opacity .5s; }
+#guide { position: fixed; inset: 0; z-index: 30; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .5s, visibility 0s .5s; cursor: pointer; }   /* 一关掉就不再拦点击，不等它淡完 */
+#guide.show { opacity: 1; visibility: visible; pointer-events: auto; transition: opacity .5s; }
 #guide-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 #guide-svg .veil { fill: rgba(20, 17, 15, .8); }
 #guide-svg .frame { fill: none; stroke: rgba(243, 235, 219, .5); stroke-width: 1; stroke-dasharray: 4 5; }
@@ -379,7 +389,8 @@ body.scrolling #side { display: none; }
 
 @media (max-width: 760px) {
   .chars { max-width: 100vw; }
-  #side { left: 10px; bottom: 96px; grid-template-columns: auto; }
+  #side { left: 10px; bottom: 96px; grid-template-columns: auto auto; }
+  #side #lay-bg { grid-column: auto; }
   #guide-svg text { font-size: 11.5px; letter-spacing: .02em; }
   .tools button[data-tip]::after { display: none; }
 }

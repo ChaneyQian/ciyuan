@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;600&display=swap" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="css/style.css?v=11eeef1c">
+<link rel="stylesheet" href="css/style.css?v=4dd628ec">
 </head>
 <body>
   <canvas id="ink" aria-hidden="true"></canvas>
@@ -43,6 +43,7 @@
   <div id="side" aria-label="撤销与图层">
     <button id="btn-undo" type="button" data-tip="撤销上一步（Ctrl+Z）" aria-label="撤销上一步">撤销</button>
     <button id="btn-bake" type="button" data-tip="把上层的物象压进底层" aria-label="固化：把上层的物象压进底层">固化</button>
+    <button id="btn-box" type="button" aria-pressed="false" data-tip="拉框选中几样东西，再一起拖动（也可按住 Alt 拖）" aria-label="框选：拉框选中几样东西，再一起拖动">框选</button>
     <span id="lay-top" class="lay" title="上层：新落的字都在这一层，可以点选、清除、撤销"></span>
     <button id="lay-bg" type="button" class="lay" aria-pressed="true" data-tip="底层锁着：清不掉、选不中。点一下开锁" aria-label="底层：固化了的物象；点一下切换锁定"></button>
   </div>
@@ -74,13 +75,13 @@
   <script src="js/chunjiang-data.js?v=b7980ba3"></script>
   <script src="js/glyph-data.js?v=0286c410"></script>
   <script src="js/fluid.js?v=72cf3095"></script>
-  <script src="js/world.js?v=3e308f87"></script>
+  <script src="js/world.js?v=24db61e2"></script>
   <script src="js/flora.js?v=6ab6ee6e"></script>
   <script src="js/fauna.js?v=2e4459ff"></script>
   <script src="js/things.js?v=8179031e"></script>
   <script src="js/extras.js?v=ac067b6c"></script>
   <script src="js/wanxiang.js?v=5320e344"></script>
-  <script src="js/lexicon.js?v=be1dd4b6"></script>
+  <script src="js/lexicon.js?v=5f0d1365"></script>
   <script src="js/glyph.js?v=0ce40cee"></script>
   <script src="js/hand.js?v=f377a0f7"></script>
   <script src="js/audio.js?v=0b719bcc"></script>
@@ -89,6 +90,6 @@
   <script src="js/pipa.js?v=0d6caae2"></script>
   <script src="js/chunjiang.js?v=6dac43b8"></script>
   <script src="js/eggs.js?v=6490e944"></script>
-  <script src="js/main.js?v=03cfc87a"></script>
+  <script src="js/main.js?v=40f9a004"></script>
 </body>
 </html>

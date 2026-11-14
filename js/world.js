@@ -300,6 +300,7 @@
       ctx.save();
       let al = clamp(e.fade, 0, 1);
       const sc = e.sc || 1;
+      if (e.ox || e.oy) ctx.translate(e.ox || 0, e.oy || 0);   // 被拖动挪过位的
       if (sc !== 1) {                                   // 远近：绕着它的立足点缩放；推远了墨色也淡一些
         const a = this.anchorOf(e);
         ctx.translate(a[0], a[1]); ctx.scale(sc, sc); ctx.translate(-a[0], -a[1]);
@@ -359,7 +360,7 @@
     for (let pass = 1; pass >= 0; pass--) for (let i = this.ents.length - 1; i >= 0; i--) {
       const e = this.ents[i];
       if ((e.layer === 0) !== (pass === 0) || !this.pickable(e)) continue;
-      const sc = e.sc || 1, a = this.anchorOf(e), qx = a[0] + (x - a[0]) / sc, qy = a[1] + (y - a[1]) / sc;
+      const sc = e.sc || 1, a = this.anchorOf(e), qx = a[0] + (x - (e.ox || 0) - a[0]) / sc, qy = a[1] + (y - (e.oy || 0) - a[1]) / sc;
       const z = (MS.Kinds[e.kind] || {}).zone, R = 58 / Math.sqrt(sc);
       let ok = false;
       for (const m of this.membersOf(e)) if (Math.hypot(qx - m.x, qy - m.y) < R) { ok = true; break; }
@@ -383,7 +384,19 @@
     if (ms.length) { cx = 0; cy = 0; for (const m of ms) { cx += m.x; cy += m.y; } cx /= ms.length; cy /= ms.length; }
     else if (z === 'side') cy = Math.min(this.H - 80, e.y + 60);
     const sc = e.sc || 1, a = this.anchorOf(e);
-    return [a[0] + (cx - a[0]) * sc, a[1] + (cy - a[1]) * sc];
+    return [a[0] + (cx - a[0]) * sc + (e.ox || 0), a[1] + (cy - a[1]) * sc + (e.oy || 0)];
+  };
+  /* 挪位。从纸底长上来的树只许左右挪，从纸边探进来的枝只许上下挪——根得留在纸边上，不然就悬空了 */
+  World.prototype.nudge = function (e, dx, dy) {
+    const z = (MS.Kinds[e.kind] || {}).zone;
+    if (z !== 'edge') e.ox = (e.ox || 0) + dx;
+    if (z !== 'side') e.oy = (e.oy || 0) + dy;
+  };
+  /* 框里有哪些灵（看它们最显眼的那一点在不在框里） */
+  World.prototype.inBox = function (x0, y0, x1, y1) {
+    const a = Math.min(x0, x1), b = Math.max(x0, x1), c = Math.min(y0, y1), d = Math.max(y0, y1), out = [];
+    for (const e of this.ents) { if (!this.pickable(e)) continue; const p = this.centerOf(e); if (p[0] >= a && p[0] <= b && p[1] >= c && p[1] <= d) out.push(e); }
+    return out;
   };
   /* 把某个字化出的东西全清掉（锁着的底层除外）。返回被清的灵，好撤销 */
   World.prototype.removeChar = function (ch) {

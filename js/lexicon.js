@@ -61,7 +61,7 @@
     '昼': { kind: 'day', tone: '仄', group: '时', note: '从日从画省；日之出入，与夜为界', alias: '晓晨' },
     '空': { kind: 'clear', tone: '平', group: '时', note: '形声字，从穴工声；万象归于空' },
     // —— 以下不出自《声律启蒙》的选字，是为演别的古文添的（先是《洛神赋》）
-    //    标了 only:'scroll' 的是戏里的人物与车马仪仗：只在「人间词话」的卷中出现，首页不列、不认、不化
+    //    标了 only:'scroll' 的是戏里的人物（人、神）：只在「人间词话」的卷中出现，首页不列、不认、不化
     '霜': { kind: 'frost', tone: '平', group: '天', note: '形声字，从雨相声' },
     '雾': { kind: 'mist', tone: '仄', group: '天', note: '形声字，从雨务声' },
     '光': { kind: 'light', tone: '平', group: '天', note: '甲骨文象人头上有火，光明之意' },
@@ -78,11 +78,11 @@
     '凫': { kind: 'duck', tone: '平', group: '羽', note: '从鸟从几；野鸭' },
     '羽': { kind: 'feather', tone: '仄', group: '羽', note: '象鸟翼上两排长毛之形' },
     '珠': { kind: 'pearl', tone: '平', group: '器', note: '形声字，从玉朱声' },
-    '旗': { only: 'scroll', kind: 'banner', tone: '平', group: '器', note: '形声字，从㫃其声' },
-    '车': { only: 'scroll', kind: 'cart', tone: '平', group: '器', note: '象车之形，有轮、舆、辕' },
+    '旗': { kind: 'banner', tone: '平', group: '器', note: '形声字，从㫃其声' },
+    '车': { kind: 'cart', tone: '平', group: '器', note: '象车之形，有轮、舆、辕' },
     '神': { only: 'scroll', kind: 'goddess', tone: '平', group: '人', note: '从示申声；「申」本象闪电' },
     '人': { only: 'scroll', kind: 'person', tone: '平', group: '人', note: '象人侧立之形' },
-    '马': { only: 'scroll', kind: 'horse', tone: '仄', group: '人', note: '象马之形，有鬃、尾、四足' },
+    '马': { kind: 'horse', tone: '仄', group: '兽', note: '象马之形，有鬃、尾、四足' },
     '泪': { kind: 'tears', tone: '仄', group: '人', note: '目中之水；古作「淚」，从水戾声' },
     // —— 为演《琵琶行》添的
     '枫': { kind: 'maple', tone: '平', group: '木', note: '形声字，从木风声；霜后叶丹' },

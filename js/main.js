@@ -8,7 +8,8 @@
 
   const $ = (id) => document.getElementById(id);
   /* 浏览器缓存里的 index.html 可能比这份脚本老：新添的几块若不在，就地补上，免得整页停摆 */
-  if (!$('side')) document.body.insertAdjacentHTML('beforeend', '<div id="side"><button id="btn-undo" type="button">撤销</button><button id="btn-bake" type="button">固化</button><span id="lay-top" class="lay"></span><button id="lay-bg" type="button" class="lay"></button></div>');
+  if (!$('side')) document.body.insertAdjacentHTML('beforeend', '<div id="side"><button id="btn-undo" type="button">撤销</button><button id="btn-bake" type="button">固化</button><button id="btn-box" type="button">框选</button><span id="lay-top" class="lay"></span><button id="lay-bg" type="button" class="lay"></button></div>');
+  if (!$('btn-box')) $('side').insertAdjacentHTML('beforeend', '<button id="btn-box" type="button">框选</button>');
   if (!$('guide')) document.body.insertAdjacentHTML('beforeend', '<div id="guide"><svg id="guide-svg"></svg><button type="button" id="guide-ok">开始</button></div>');
   const inkCanvas = $('ink'), stage = $('stage'), ime = $('ime');
   const ctx = stage.getContext('2d');
@@ -91,7 +92,8 @@
     if (Scroll.active) return;
     const op = undo.pop();
     if (!op) return;
-    if (op.scale) { op.e.sc = op.from; world.resort(); }
+    if (op.scale) { for (const m of op.list) m[0].sc = m[1]; world.resort(); }
+    else if (op.move) { for (const m of op.move) { m[0].ox = m[1]; m[0].oy = m[2]; } }
     else if (op.bake) { for (const e of op.bake) e.layer = 1; }
     else {
       for (const e of op.added) { e.dying = true; e.fade = Math.min(e.fade, 0.5); }
@@ -99,7 +101,7 @@
       world.ents = world.ents.filter((e) => e.kind !== 'mark'); for (const m of op.marks) world.ents.unshift(m);
       world.season = op.season; world.night = op.night;
     }
-    if (sel && sel.dying) sel = null;
+    selClean();
     refreshDock(); refreshSide(); Audio.play('stage', { idx: 3 });
   }
   MS.undo = doUndo;
@@ -166,7 +168,9 @@
         const partners = Lex.partners(ch).slice(0, 3).map((p) => p.other).join(' ');
         b.dataset.tip = def.tone + '声' + (partners ? ' · 对 ' + partners : '');
         b.setAttribute('aria-label', ch + '，' + def.tone + '声' + (partners ? '，可对 ' + partners : ''));
+        b.addEventListener('pointerdown', (e) => { if (e.button === 0) dockDrag = { ch, x: e.clientX, y: e.clientY, on: false, touch: e.pointerType === 'touch' }; });
         b.addEventListener('click', () => {
+          if (performance.now() < skipClick) return;       // 刚才那一下是拖，不是点
           wake(); yieldAuto();
           const p = world.placeFor(ch);
           commit(ch, p.x, p.y);
@@ -178,6 +182,33 @@
       dock.appendChild(grp);
     }
   })();
+  /* 按住字钮不放，拖到画里：松手处落笔成物 */
+  let dockDrag = null, skipClick = 0;
+  const ghost = document.createElement('div');
+  ghost.id = 'ghost'; ghost.setAttribute('aria-hidden', 'true'); document.body.appendChild(ghost);
+  const overUI = (x, y) => { const n = document.elementFromPoint(x, y); return !!(n && n.closest && n.closest('.dock, .tools, #side, #vols')); };
+  window.addEventListener('pointermove', (e) => {
+    const d = dockDrag;
+    if (!d) return;
+    const dx = e.clientX - d.x, dy = e.clientY - d.y;
+    if (!d.on) {
+      if (Math.hypot(dx, dy) < 8 || (d.touch && -dy < Math.abs(dx))) return;      // 触屏上横着划是翻字钮，往上提才是拖
+      d.on = true; ghost.textContent = d.ch; ghost.classList.add('show'); wake();
+    }
+    ghost.style.left = e.clientX + 'px'; ghost.style.top = e.clientY + 'px';
+    ghost.classList.toggle('ok', !overUI(e.clientX, e.clientY));
+  });
+  const dropDock = (e) => {
+    const d = dockDrag;
+    dockDrag = null;
+    if (!d || !d.on) return;
+    ghost.classList.remove('show'); skipClick = performance.now() + 400;
+    if (e.type === 'pointerup' && !Scroll.active && !overUI(e.clientX, e.clientY)) { yieldAuto(); commit(d.ch, e.clientX, e.clientY); ime.focus({ preventScroll: true }); }
+  };
+  window.addEventListener('pointerup', dropDock);
+  window.addEventListener('pointercancel', dropDock);
+  MS.dragChar = (ch, x, y) => { yieldAuto(); commit(ch, x, y); };
+
   /* 把某个字在画里化出的东西一次清掉；四时与夜则是把时令、夜色撤回去 */
   function wipe(ch) {
     const def = MS.CHARS[ch], before = snap();
@@ -186,7 +217,7 @@
     else if (def.kind === 'night') { if (world.night) { world.night = false; unmark(); } }
     else if (def.kind !== 'day' && def.kind !== 'clear') world.removeChar(ch);
     record(before);
-    if (sel && sel.dying) sel = null;
+    selClean();
     refreshDock(); Audio.play('stage', { idx: 4 });
   }
   MS.wipe = wipe;
@@ -221,8 +252,8 @@
     if (state.pinyin) parts.push('拟声已开：直接敲拼音 shan、yue、long');
     else if (!touchOnly) parts.push('键盘直接打字，字会活过来');
     if (state.hand) parts.push('造字已开：在纸上写一个字，停笔即判');
-    else parts.push('点字落笔', '拖动落墨');
-    parts.push(touchOnly ? '长按字钮清除' : '右键字钮清除', '点物象后滚轮调远近');
+    else parts.push('点字落笔，或按住拖到画里', '拖动落墨');
+    parts.push(touchOnly ? '长按字钮清除' : '右键字钮清除', '点物象后拖动移位、滚轮调远近');
     if (!touchOnly) parts.push('按住 Shift 泼水');
     const box = $('hint-mode'); box.textContent = '';
     for (const t of parts) { box.append(t); const dot = document.createElement('i'); dot.textContent = '·'; box.appendChild(dot); }
@@ -249,36 +280,50 @@
     wake();
     const list = world.bake();
     if (list.length) { pushUndo({ bake: list }); Audio.play('stage', { idx: 2 }); }
-    if (sel && !world.pickable(sel)) sel = null;
+    selClean();
     refreshSide();
   });
-  $('lay-bg').addEventListener('click', () => { world.locked = !world.locked; if (sel && !world.pickable(sel)) sel = null; refreshSide(); });
+  $('lay-bg').addEventListener('click', () => { world.locked = !world.locked; selClean(); refreshSide(); });
 
-  /* ---------- 点选一个物象，滚轮调它的远近 ---------- */
-  let sel = null, pick = null, sideT = 0;
+  /* ---------- 点选 / 框选物象：拖动移位，滚轮调远近 ---------- */
+  let sels = [], pick = null, drag = null, sideT = 0;
+  function selClean() { if (sels.length) sels = sels.filter((e) => world.pickable(e) && world.ents.indexOf(e) >= 0); }
   function drawSel() {
-    if (!sel) return;
-    if (!world.pickable(sel) || world.ents.indexOf(sel) < 0) { sel = null; return; }
-    const c = world.centerOf(sel), r = 40 * Math.sqrt(sel.sc || 1) + 6, night = world.nightK > 0.5;
+    selClean();
+    if (!sels.length && !drag) return;
+    const red = world.nightK > 0.5 ? 'rgba(236,88,68,' : 'rgba(176,36,30,';
     ctx.save();
-    ctx.strokeStyle = night ? 'rgba(236,88,68,0.9)' : 'rgba(176,36,30,0.78)'; ctx.lineWidth = 1.4;
-    ctx.setLineDash([7, 9]); ctx.lineDashOffset = -world.t * 16;
-    ctx.beginPath(); ctx.arc(c[0], c[1], r, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = red + '0.8)'; ctx.lineWidth = 1.4; ctx.setLineDash([7, 9]); ctx.lineDashOffset = -world.t * 16;
+    let low = null;
+    for (const e of sels) {
+      const c = world.centerOf(e), r = 40 * Math.sqrt(e.sc || 1) + 6;
+      ctx.beginPath(); ctx.arc(c[0], c[1], r, 0, Math.PI * 2); ctx.stroke();
+      if (!low || c[1] + r > low[1]) low = [c[0], c[1] + r, e];
+    }
+    if (drag && drag.type === 'box') {                     // 正在拉的框
+      const x = Math.min(drag.x0, drag.x1), y = Math.min(drag.y0, drag.y1), bw = Math.abs(drag.x1 - drag.x0), bh = Math.abs(drag.y1 - drag.y0);
+      ctx.fillStyle = red + '0.06)'; ctx.fillRect(x, y, bw, bh); ctx.strokeRect(x, y, bw, bh);
+    }
     ctx.setLineDash([]);
-    ctx.font = '12px ' + MS.FONT_TEXT; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    ctx.fillStyle = night ? 'rgba(236,88,68,0.95)' : 'rgba(176,36,30,0.9)';
-    ctx.fillText((sel.ch || '') + ' · 滚轮调远近 ' + Math.round((sel.sc || 1) * 100) + '%', c[0], Math.min(state.H - 20, c[1] + r + 7));
+    if (low) {
+      const e = low[2];
+      ctx.font = '12px ' + MS.FONT_TEXT; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillStyle = red + '0.92)';
+      ctx.fillText(sels.length > 1 ? '已选 ' + sels.length + ' 样 · 拖动移位 · 滚轮调远近' : (e.ch || '') + ' · 拖动移位 · 滚轮调远近 ' + Math.round((e.sc || 1) * 100) + '%', clamp(low[0], 120, state.W - 120), Math.min(state.H - 20, low[1] + 7));
+    }
     ctx.restore();
   }
   function zoomSel(d) {
-    const from = sel.sc || 1, to = clamp(from * Math.exp(-d * 0.0012), 0.3, 2.6), last = undo[undo.length - 1], now = performance.now();
-    if (to === from) return;
-    if (last && last.scale && last.e === sel && now - last.at < 1200) last.at = now;       // 一口气滚的算一步
-    else pushUndo({ scale: true, e: sel, from, at: now });
-    sel.sc = to; world.resort();
+    const last = undo[undo.length - 1], now = performance.now(), k = Math.exp(-d * 0.0012);
+    if (last && last.scale && now - last.at < 1200 && last.list.length === sels.length && last.list.every((m, i) => m[0] === sels[i])) last.at = now;   // 一口气滚的算一步
+    else pushUndo({ scale: true, list: sels.map((e) => [e, e.sc || 1]), at: now });
+    for (const e of sels) e.sc = clamp((e.sc || 1) * k, 0.3, 2.6);
+    world.resort();
   }
-  MS.select = (e) => { sel = e || null; };
-  MS.zoom = (d) => { if (sel) zoomSel(d); };
+  MS.select = (e) => { sels = e ? (Array.isArray(e) ? e.slice() : [e]) : []; };
+  MS.selected = () => sels.slice();
+  MS.zoom = (d) => { if (sels.length) zoomSel(d); };
+  /* 框选开关：开着时在纸上拖是拉框，不是落墨（不开也可以按住 Alt 拖） */
+  $('btn-box').addEventListener('click', () => { state.box = !state.box; press($('btn-box'), state.box); document.body.classList.toggle('boxing', state.box); });
 
   /* ---------- 人间词话：手卷 ---------- */
   const volsEl = $('vols');
@@ -295,7 +340,7 @@
   });
   window.addEventListener('click', () => volsEl.classList.remove('show'));
   function openScroll(id) {
-    wake(); setAuto(false); Eggs.stop(true); sel = null;
+    wake(); setAuto(false); Eggs.stop(true); sels = []; drag = null;
     if (!Scroll.open(id, fluid, state.W, state.H)) return;
     Hand.setEnabled(true); pyClear(); Glyphs.list.length = 0;
     $('btn-scroll').textContent = '收卷'; press($('btn-scroll'), true); press($('btn-auto'), false);
@@ -340,11 +385,11 @@
   window.addEventListener('wheel', (e) => {
     const d = (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY) * (e.deltaMode ? 30 : 1);
     if (Scroll.active) { e.preventDefault(); hideHint(); Scroll.wheel(d); }
-    else if (sel && !guideOn) { e.preventDefault(); zoomSel(d); }                         // 首页：选中了一个物象，滚轮推远拉近
+    else if (sels.length && !guideOn) { e.preventDefault(); zoomSel(d); }                         // 首页：选中了一个物象，滚轮推远拉近
   }, { passive: false });
 
   /* 第一次进来蒙一层引导：蒙版上给真实的按键开窗，每个键拉一条引线到一句说明。只出现一次（记在本机） */
-  const guideEl = $('guide'), guideSvg = $('guide-svg'), GUIDE = 'ciyuan.guide';
+  const guideEl = $('guide'), guideSvg = $('guide-svg'), GUIDE = 'ciyuan.guide2';     // 引导添了新内容，换个名字让它再出现一次
   const TIPS = {
     'btn-scroll': '把一篇古文演成手卷，补上缺的字，画才往下走',
     'btn-auto': '它自己取《声律启蒙》写成画；你一动笔它就停',
@@ -403,18 +448,19 @@
     // 字钮
     const dx = dockB.x + dockB.w / 2, dy = dockB.y - 34;
     lead([dx, dockB.y - 3, dx, dy + 12]);
-    say(dx, dy, 'middle', narrow ? '' : '字钮', narrow ? '点字落笔 · 长按清掉这个字的物象' : '点一下落字 · 右键清掉这个字化出的东西 · 最后一组「四时」改的是整幅画');
+    say(dx, dy, 'middle', narrow ? '' : '字钮', narrow ? '点字落笔 · 按住往上拖到画里 · 长按清除' : '点一下落字 · 按住不放拖到画里，松手处落笔 · 右键清掉它化出的东西 · 末一组「四时」改整幅画');
     // 左下角：撤销与图层
     if (side.w > 30) {
       const sx = side.x + side.w / 2, sy = Math.min(side.y, dockB.y) - (narrow ? 22 : 64);
       lead([sx, side.y - 3, sx, sy + 12]);
-      say(Math.max(12, side.x + 4), sy, 'start', '', narrow ? '撤销 · 固化' : '撤销（Ctrl+Z）· 固化：把上层的物象压进底层锁住');
+      say(Math.max(12, side.x + 4), sy, 'start', '', narrow ? '撤销 · 固化 · 框选' : '撤销（Ctrl+Z）· 固化：上层压进底层锁住 · 框选：拉框选中几样');
     }
     // 画面：点选物象，滚轮调远近
     const cx = W * (narrow ? 0.2 : 0.16), cy = Math.min(H * 0.56, dockB.y - 150);
     guideSvg.appendChild(el('circle', { class: 'ring', cx, cy, r: 30 }));
     lead([cx + 30, cy, cx + 58, cy]);
-    say(cx + 64, cy, 'start', '', narrow ? '点一下物象选中，再滚轮调远近' : '画里的东西：点一下选中，滚轮推远拉近');
+    if (narrow) say(cx + 64, cy, 'start', '', '点一下选中 · 拖动移位 · 滚轮调远近');
+    else { say(cx + 64, cy - 10, 'start', '画里的东西', '点一下选中，或框选几样'); say(cx + 64, cy + 11, 'start', '', '拖动移位 · 滚轮推远拉近'); }       // 折成两行，别压到「开始」
   }
   if (guideOn) { guideEl.classList.add('show'); layoutGuide(); setTimeout(layoutGuide, 400); setTimeout(layoutGuide, 1800); }
   window.addEventListener('resize', layoutGuide);
@@ -461,7 +507,7 @@
 
   /* ---------- 留影 ---------- */
   function snapshot() {
-    if (sel && !Scroll.active) { const keep = sel; sel = null; tick(0.001); sel = keep; }   // 别把选中的圈拍进去
+    if (sels.length && !Scroll.active) { const keep = sels; sels = []; tick(0.001); sels = keep; }   // 别把选中的圈拍进去
     compose().toBlob((blob) => {
       if (!blob) return;
       const a = document.createElement('a'), d = new Date(), p = (n) => String(n).padStart(2, '0');
@@ -509,11 +555,18 @@
     const sm = Scroll.active ? Scroll.pointerDown(e.clientX, e.clientY, e.pointerType === 'touch') : '';
     state.noInk = sm === 'pan' || sm === 'write';
     state.writing = sm === 'write' || (state.hand && !Scroll.active);
-    // 首页：按在一个物象上，先不落墨——抬手时还没拖开，就是点选它
-    pick = !Scroll.active && !e.shiftKey && e.button === 0 ? world.hit(e.clientX, e.clientY) : null;
+    pick = null; drag = null;
     state.sx = e.clientX; state.sy = e.clientY;
-    if (pick) return;
-    if (!Scroll.active && !e.shiftKey) sel = null;         // 点在空处：放开选中的
+    if (!Scroll.active && !e.shiftKey && e.button === 0) {
+      const hit = world.hit(e.clientX, e.clientY);
+      if (hit && sels.indexOf(hit) >= 0) {                 // 按在选中的上面：拖动，一起挪位
+        drag = { type: 'move', x: e.clientX, y: e.clientY, hit, moved: false, from: sels.map((q) => [q, q.ox || 0, q.oy || 0]) };
+        return;
+      }
+      if (state.box || e.altKey) { drag = { type: 'box', x0: e.clientX, y0: e.clientY, x1: e.clientX, y1: e.clientY }; return; }   // 框选：拉一个框
+      if (hit) { pick = hit; return; }                     // 按在一个物象上，先不落墨——抬手时还没拖开，就是点选它
+      sels = [];                                           // 点在空处：放开选中的
+    }
     firstTouch(e.clientX, e.clientY, sm, e.shiftKey);
   });
   function firstTouch(x, y, sm, shift) {
@@ -539,6 +592,15 @@
     P.x = x; P.y = y; P.vx = vx; P.vy = vy; P.moved = 0;
     if (!ime.matches(':focus') || !composing) moveIme(x, y);
     if (Scroll.active) Scroll.pointerMove(x, y);
+    if (drag && state.down) {
+      if (drag.type === 'box') { drag.x1 = x; drag.y1 = y; }
+      else if (drag.moved || Math.hypot(x - state.sx, y - state.sy) > 5) {
+        drag.moved = true;
+        for (const q of sels) world.nudge(q, x - drag.x, y - drag.y);
+        drag.x = x; drag.y = y;
+      }
+      lastX = x; lastY = y; lastT = t; return;
+    }
     if (pick && state.down) {                              // 按在物象上却拖开了：那是落笔，不是点选
       if (Math.hypot(x - state.sx, y - state.sy) < 7) { lastX = x; lastY = y; lastT = t; return; }
       pick = null; firstTouch(state.sx, state.sy, '', false);
@@ -562,7 +624,16 @@
     lastX = x; lastY = y; lastT = t;
   });
   const up = () => {
-    if (pick && state.down) { sel = sel === pick ? null : pick; pick = null; Audio.play('stage', { idx: 1 }); state.down = false; state.noInk = false; state.writing = false; return; }
+    if (drag && state.down) {
+      if (drag.type === 'move') {
+        if (drag.moved) pushUndo({ move: drag.from });
+        else sels = sels.filter((q) => q !== drag.hit);    // 没拖：点一下选中的，是放开它
+      } else if (Math.abs(drag.x1 - drag.x0) < 6 && Math.abs(drag.y1 - drag.y0) < 6) { const h = world.hit(drag.x1, drag.y1); sels = h ? [h] : []; }
+      else sels = world.inBox(drag.x0, drag.y0, drag.x1, drag.y1);
+      Audio.play('stage', { idx: 1 });
+      drag = null; state.down = false; state.noInk = false; state.writing = false; return;
+    }
+    if (pick && state.down) { sels = [pick]; pick = null; Audio.play('stage', { idx: 1 }); state.down = false; state.noInk = false; state.writing = false; return; }
     pick = null;
     const traced = Scroll.active && Scroll.pointerUp();
     if (traced) Hand.cancel(); else Hand.up();          // 这一笔是在描古字：不必再当手写去认
@@ -647,9 +718,9 @@
     if (guideOn) { closeGuide(); if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); return; } }
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === 'z' || e.key === 'Z') && !Scroll.active) { e.preventDefault(); doUndo(); return; }   // 撤销
     if (e.ctrlKey || e.metaKey || e.altKey) return;
-    if (!Scroll.active && sel && !py.buf) {
-      if (e.key === 'Escape') { sel = null; return; }
-      if (e.key === 'Delete') { const before = snap(); sel.dying = true; sel = null; record(before); refreshDock(); e.preventDefault(); return; }
+    if (!Scroll.active && sels.length && !py.buf) {
+      if (e.key === 'Escape') { sels = []; return; }
+      if (e.key === 'Delete') { const before = snap(); for (const q of sels) q.dying = true; sels = []; record(before); refreshDock(); e.preventDefault(); return; }
     }
     if (Scroll.active) { hideHint(); if (Scroll.key(e)) { e.preventDefault(); press($('btn-auto'), Scroll.auto); } return; }
     if (py.buf && !composing) {
