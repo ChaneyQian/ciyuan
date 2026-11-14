@@ -329,6 +329,13 @@
     bee: (t, p) => tremolo('pipa', 12, t, 0.9, 0.12, p),
     shrimp: (t, p) => { for (let k = 0; k < 4; k++) pluck('zheng', freq(12 + [0, 2, 1, 4][k]), t + k * 0.16, { vol: 0.2, pan: p + R(-0.2, 0.2) }); },
     tiger: (t, p) => { drum(t, { vol: 0.8, f: 60, pan: p }); noiseSweep(t, 1.6, 240, 110, 70, 0.6, 0.4, p, 'lowpass'); pluck('qin', freq(-7), t + 0.1, { vol: 0.7, pan: p, slide: -3 }); },
+    sheep: (t, p) => { flute(freq(9), t, 0.5, { xiao: true, vol: 0.1, fall: -2, pan: p }); flute(freq(7), t + 0.7, 0.8, { xiao: true, vol: 0.09, fall: -3, pan: p }); },
+    rooster: (t, p) => { gliss(t, 9, 16, 0.07, 0.22, p); gliss(t + 0.26, 16, 19, 0.08, 0.5, p); gliss(t + 0.8, 19, 11, 0.06, 0.6, p); },
+    dog: (t, p) => { woodfish(t, 300, 0.2); woodfish(t + 0.22, 260, 0.18); pluck('qin', freq(0), t + 0.5, { vol: 0.4, pan: p, slide: 2 }); },
+    bow: (t, p) => { pluck('qin', freq(-5), t, { vol: 0.8, pan: p, slide: 7 }); noiseSweep(t + 0.5, 0.5, 3000, 900, 1600, 1.4, 0.1, p); },
+    go: (t, p) => { woodfish(t, 620, 0.22); woodfish(t + 0.6, 540, 0.18); woodfish(t + 1.5, 660, 0.16); },
+    orange: (t, p) => phrase('zheng', [[4, 0.3], [7, 0.3], [9, 0.3], [12, 0.8]], t, { vol: 0.26, pan: p }),
+    melon: (t, p) => phrase('zheng', [[0, 0.4], [2, 0.3], [4, 0.3], [7, 0.9]], t, { vol: 0.26, pan: p }),
     ox: (t, p) => phrase('di', [[4, 0.3], [5, 0.2], [4, 0.5], [2, 0.3], [4, 0.9]], t, { vol: 0.12, pan: p, vib: 0.03 }),
     ape: (t, p) => { flute(freq(14), t, 1.3, { xiao: true, vol: 0.12, fall: -5, pan: p }); flute(freq(12), t + 1.6, 1.7, { xiao: true, vol: 0.1, fall: -7, pan: p }); },
     qin: (t, p) => phrase('qin', [[0, 0.8], [4, 0.6], [2, 0.6], [-1, 1.8]], t, { vol: 0.6, pan: p, vib: 1 }),
@@ -356,6 +363,7 @@
     youth: (t) => phrase('pipa', [[7, 0.2], [9, 0.2], [11, 0.2], [9, 0.2], [12, 0.4], [11, 0.2], [9, 0.2], [7, 0.5]], t, { vol: 0.28 }),  // 一曲红绡不知数
     dream: (t) => phrase('xiao', [[7, 1.2], [9, 0.8], [7, 2.2]], t, { vol: 0.11, fall: -2 }),                                             // 夜深忽梦少年事
     ape: (t) => { flute(freq(14), t, 1.4, { xiao: true, vol: 0.13, fall: -5 }); flute(freq(12), t + 1.7, 1.9, { xiao: true, vol: 0.11, fall: -7 }); },   // 猿哀鸣
+    crow: (t) => { gliss(t, 9, 16, 0.07, 0.22, 0); gliss(t + 0.26, 16, 19, 0.08, 0.5, 0); gliss(t + 0.8, 19, 11, 0.06, 0.6, 0); },                         // 雄鸡一声
     flute: (t) => phrase('di', [[4, 0.3], [5, 0.2], [4, 0.5], [2, 0.3], [4, 0.9]], t, { vol: 0.11, vib: 0.03 }),                          // 山歌与村笛
     urgent: (t) => { for (let k = 0; k < 28; k++) pluck('pipa', freq([7, 9, 7, 5][k % 4] + (k > 15 ? 2 : 0)), t + 2.8 * (1 - Math.pow(1 - k / 28, 1.6)), { vol: 0.2 + k * 0.008 }); },   // 却坐促弦弦转急
     weep: (t) => phrase('xiao', [[4, 1.4], [2, 1.0], [0, 2.4]], t, { vol: 0.13, fall: -2 }),                                              // 江州司马青衫湿

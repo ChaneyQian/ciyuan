@@ -138,6 +138,17 @@
     const s = document.createElement('div'); s.className = 'src';
     s.textContent = src || ('声律启蒙 · ' + L.rhyme);
     verseEl.appendChild(s);
+    const ns = (!src || src.indexOf('声律启蒙') === 0) ? Lex.notesFor(L.text) : [];   // 句中的典故，小字注在题句左侧
+    if (ns.length) {
+      const box = document.createElement('div'); box.className = 'note';
+      for (const n of ns) {
+        const p = document.createElement('p'), b = document.createElement('b');
+        b.textContent = n.key; p.appendChild(b); p.appendChild(document.createTextNode(n.text));
+        box.appendChild(p);
+      }
+      verseEl.appendChild(box);
+    }
+    state.verseNotes = ns.length;
   }
   Eggs.bind({ world, verse: showVerse, auto: () => state.auto });
 
@@ -502,7 +513,7 @@
       const ch = step.chars[auto.ci++], p = world.placeFor(ch);
       commit(ch, p.x, p.y);
       auto.timer = 2.8;
-    } else { auto.si++; auto.ci = 0; auto.timer = step.chars.length ? 2.4 : 3.4; }
+    } else { auto.si++; auto.ci = 0; auto.timer = (step.chars.length ? 2.4 : 3.4) + (state.verseNotes ? 2.2 + state.verseNotes * 1.6 : 0); }   // 有典故的句子多留一会儿，容人读注
   }
 
   /* ---------- 留影 ---------- */

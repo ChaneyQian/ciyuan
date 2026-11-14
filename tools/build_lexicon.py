@@ -27,7 +27,11 @@ for m in re.finditer(r"==(卷[上下])==|===\s*([^=]+?)\s*===\s*<poem>(.*?)</poe
         sents = [x for x in re.split(r"(?<=[。；])", t) if x]
         stanzas.append(sents)
     sections.append({"vol": vol, "rhyme": name, "stanzas": stanzas})
-fix = {"雝雝": "雍雍", "荼縻": "荼蘼", "余": "余"}
+fix = {"雝雝": "雍雍", "荼縻": "荼蘼", "余": "余",
+       # 对照通行注本校出的讹字（多是形近、音近之误）
+       "燕于非": "燕于飞", "秋吟借霜威": "秋冷借霜威", "虎瓜对龙麟": "虎爪对龙鳞", "滤酒": "漉酒",
+       "晋士已瓜分": "晋土已瓜分", "刘贲": "刘蕡", "酸梅对李苦": "梅酸对李苦", "鱼矶": "渔矶",
+       "渭水之鱼": "渭水之渔", "烟青笼岸柳": "烟轻笼岸柳", "博山垆": "博山炉"}
 js = json.dumps(sections, ensure_ascii=False, separators=(",", ":"))
 for a, b in fix.items(): js = js.replace(a, b)
 open(out, "w", encoding="utf-8", newline="\n").write(

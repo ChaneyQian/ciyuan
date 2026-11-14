@@ -32,9 +32,9 @@
     '花': { kind: 'flower', tone: '平', group: '木', note: '本作「华」，象草木花开之形', alias: '杏桃棠蕊李梨' },
     '荷': { kind: 'lotus', tone: '平', group: '木', note: '形声字，从艸何声', alias: '莲菡萏蓉芰' },
     '菊': { kind: 'mum', tone: '仄', group: '木', note: '形声字，从艸匊声' },
-    '草': { kind: 'grass', tone: '仄', group: '木', note: '本作「艸」，象草芽并生', alias: '莎茸蒲' },
+    '草': { kind: 'grass', tone: '仄', group: '木', note: '本作「艸」，象草芽并生', alias: '莎茸蒲苔藓' },
     // —— 禽鸟
-    '鸟': { kind: 'birds', tone: '仄', group: '羽', note: '象鸟侧立之形，喙、羽、足俱全', alias: '雀禽' },
+    '鸟': { kind: 'birds', tone: '仄', group: '羽', note: '象鸟侧立之形，喙、羽、足俱全', alias: '雀禽鸠鹃' },
     '燕': { kind: 'swallow', tone: '仄', group: '羽', note: '象燕子张口、展翅、剪尾之形' },
     '雁': { kind: 'geese', tone: '仄', group: '羽', note: '从隹从人，厂声；雁行有序如人' },
     '莺': { kind: 'oriole', tone: '平', group: '羽', note: '形声字，从鸟，荣省声', alias: '鹂' },
@@ -70,7 +70,7 @@
     '波': { kind: 'water', tone: '平', group: '地', note: '形声字，从水皮声' },
     '渊': { kind: 'pool', tone: '平', group: '地', note: '象回旋的深水，外有岸' },
     '岩': { kind: 'rock', tone: '平', group: '地', note: '山上之石；古作「巖」，从山严声', alias: '石' },
-    '林': { kind: 'grove', tone: '平', group: '木', note: '二木相并，树木丛生' },
+    '林': { kind: 'grove', tone: '平', group: '木', note: '二木相并，树木丛生', alias: '树' },
     '兰': { kind: 'orchid', tone: '平', group: '木', note: '形声字，繁体作「蘭」，从艸阑声' },
     '芝': { kind: 'zhi', tone: '平', group: '木', note: '形声字，从艸之声；瑞草' },
     '蕖': { kind: 'lotus', tone: '平', group: '木', note: '形声字，从艸渠声；芙蕖即荷花' },
@@ -82,13 +82,13 @@
     '车': { kind: 'cart', tone: '平', group: '器', note: '象车之形，有轮、舆、辕' },
     '神': { only: 'scroll', kind: 'goddess', tone: '平', group: '人', note: '从示申声；「申」本象闪电' },
     '人': { only: 'scroll', kind: 'person', tone: '平', group: '人', note: '象人侧立之形' },
-    '马': { kind: 'horse', tone: '仄', group: '兽', note: '象马之形，有鬃、尾、四足' },
+    '马': { kind: 'horse', tone: '仄', group: '兽', note: '象马之形，有鬃、尾、四足', alias: '骢骥驹' },
     '泪': { kind: 'tears', tone: '仄', group: '人', note: '目中之水；古作「淚」，从水戾声' },
     // —— 为演《琵琶行》添的
     '枫': { kind: 'maple', tone: '平', group: '木', note: '形声字，从木风声；霜后叶丹' },
     '泉': { kind: 'spring', tone: '平', group: '地', note: '象水从石穴中流出之形' },
     '冰': { kind: 'ice', tone: '平', group: '地', note: '古作「仌」，象冰裂之纹，后加水旁' },
-    '酒': { kind: 'wine', tone: '仄', group: '器', note: '从水从酉；「酉」象酒坛之形' },
+    '酒': { kind: 'wine', tone: '仄', group: '器', note: '从水从酉；「酉」象酒坛之形', alias: '醅觞' },
     // —— 再从《声律启蒙》里请出的一批（画法见 wanxiang.js）
     '露': { kind: 'dew', tone: '仄', group: '天', note: '形声字，从雨路声' },
     '海': { kind: 'sea', tone: '仄', group: '地', note: '形声字，从水每声；百川所归', alias: '浪涛' },
@@ -101,14 +101,22 @@
     '虎': { kind: 'tiger', tone: '仄', group: '兽', note: '象虎之形：巨口、利爪、斑纹' },
     '牛': { kind: 'ox', tone: '平', group: '兽', note: '象牛头之形，突出一对弯角', alias: '犊' },
     '猿': { kind: 'ape', tone: '平', group: '兽', note: '形声字，从犬袁声' },
-    '琴': { kind: 'qin', tone: '平', group: '器', note: '象琴之形；小篆上象弦与琴柱', alias: '瑟' },
+    '琴': { kind: 'qin', tone: '平', group: '器', note: '象琴之形；小篆上象弦与琴柱', alias: '瑟筝' },
     '书': { kind: 'book', tone: '平', group: '器', note: '繁体作「書」，从聿者声；「聿」是手执笔', alias: '卷' },
     '笔': { kind: 'pen', tone: '仄', group: '器', note: '繁体作「筆」，从竹从聿；手执笔之形', alias: '墨砚' },
     '茶': { kind: 'tea', tone: '平', group: '器', note: '古作「荼」，唐以后减去一横' },
     '笛': { kind: 'flute', tone: '仄', group: '器', note: '形声字，从竹由声', alias: '箫管' },
     '香': { kind: 'incense', tone: '平', group: '器', note: '从黍从甘，黍稷之馨', alias: '炉' },
     // —— 为演《春江花月夜》添的
-    '潮': { kind: 'tide', tone: '平', group: '地', note: '形声字，从水朝声；海水朝夕涨落' }
+    '潮': { kind: 'tide', tone: '平', group: '地', note: '形声字，从水朝声；海水朝夕涨落' },
+    // —— 从《声律启蒙》的典故里走出来的（diangu.js）
+    '橘': { kind: 'orange', tone: '仄', group: '木', note: '形声字，从木矞声', alias: '柑橙' },
+    '瓜': { kind: 'melon', tone: '平', group: '木', note: '象藤蔓之下结着一只瓜', alias: '瓠' },
+    '鸡': { kind: 'rooster', tone: '平', group: '羽', note: '甲骨文象高冠长尾的雄鸡，后加「奚」为声' },
+    '羊': { kind: 'sheep', tone: '平', group: '兽', note: '象羊头之形，突出一对下弯的角' },
+    '犬': { kind: 'dog', tone: '仄', group: '兽', note: '象犬侧立之形，瘦腹，尾上卷', alias: '狗尨' },
+    '弓': { kind: 'bow', tone: '平', group: '器', note: '象弓之形，有弓背，有弓弦', alias: '弧' },
+    '棋': { kind: 'go', tone: '平', group: '器', note: '形声字，从木其声；古作「棊」「碁」', alias: '弈枰' }
   };
   // 拼音（内置拼音输入用）与笔画数（手写判定用）
   const PY = {
@@ -123,7 +131,8 @@
     '枫': 'feng', '泉': 'quan', '冰': 'bing', '酒': 'jiu',
     '露': 'lu', '海': 'hai', '城': 'cheng', '叶': 'ye', '凤': 'feng', '鹭': 'lu', '蜂': 'feng', '虾': 'xia', '虎': 'hu', '牛': 'niu', '猿': 'yuan',
     '琴': 'qin', '书': 'shu', '笔': 'bi', '茶': 'cha', '笛': 'di', '香': 'xiang',
-    '潮': 'chao'
+    '潮': 'chao',
+    '橘': 'ju', '瓜': 'gua', '鸡': 'ji', '羊': 'yang', '犬': 'quan', '弓': 'gong', '棋': 'qi'
   };
   const STROKES = {
     '日': 4, '月': 4, '星': 9, '云': 4, '雨': 8, '雪': 11, '风': 4, '雷': 13, '虹': 9, '霞': 17, '烟': 10,
@@ -137,7 +146,8 @@
     '枫': 8, '泉': 9, '冰': 6, '酒': 10,
     '露': 21, '海': 10, '城': 9, '叶': 5, '凤': 4, '鹭': 18, '蜂': 13, '虾': 9, '虎': 8, '牛': 4, '猿': 13,
     '琴': 12, '书': 4, '笔': 10, '茶': 9, '笛': 11, '香': 9,
-    '潮': 15
+    '潮': 15,
+    '橘': 16, '瓜': 5, '鸡': 7, '羊': 6, '犬': 4, '弓': 3, '棋': 12
   };
   for (const ch in C) { C[ch].py = PY[ch]; C[ch].strokes = STROKES[ch]; }
   MS.CHARS = C;
@@ -203,6 +213,14 @@
     return hits.length ? hits[0] : null;
   };
 
+  /* 句中的典故（shenglv-notes.js）：按在句中的先后排，至多三条；被更长的词包住的短词不重复出 */
+  Lex.notesFor = function (text) {
+    const hit = [];
+    for (const n of MS.NOTES || []) { const i = text.indexOf(n[0]); if (i >= 0) hit.push({ i, key: n[0], text: n[1] }); }
+    return hit.filter((a) => !hit.some((b) => b !== a && b.key.length > a.key.length && b.key.indexOf(a.key) >= 0))
+      .sort((a, b) => a.i - b.i).slice(0, 3);
+  };
+
   /* 为眼前的世界挑一句《声律启蒙》：必须含刚写的字，且尽量多含在场的字 */
   Lex.verseFor = function (ch, present, avoid) {
     let best = null, bestScore = -1;
@@ -212,7 +230,8 @@
       let n = 0;
       for (const c of L.chars) if (present.has(c)) n++;
       const len = L.text.replace(/，/g, '').length;
-      const score = n * 10 + (len >= 10 && len <= 14 ? 3 : 0) + Math.random() * 4;
+      if (L.noted === undefined) L.noted = Lex.notesFor(L.text).length > 0;
+      const score = n * 10 + (len >= 10 && len <= 14 ? 3 : 0) + (L.noted ? 2.5 : 0) + Math.random() * 4;   // 有典故可讲的句子略占先
       if (score > bestScore) { bestScore = score; best = L; }
     }
     return best;

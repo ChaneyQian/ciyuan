@@ -81,6 +81,17 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
   writing-mode: vertical-rl; font-size: 11.5px; letter-spacing: .3em; color: rgba(var(--ink), .42);
   align-self: flex-end; opacity: 0; animation: drop 1s 1.2s var(--ease) forwards;
 }
+/* 典故小注：题句左侧的几行小字，词头用朱色 */
+.verse .note {
+  writing-mode: vertical-rl; max-height: min(17.5em, 54vh); margin-right: 10px; padding-right: 12px;
+  border-right: 1px solid rgba(var(--ink), .14);
+  font-size: 12.5px; line-height: 1.75; letter-spacing: .14em; color: rgba(var(--ink), .66);
+  text-shadow: 0 0 5px var(--paper), 0 0 10px var(--paper);
+  opacity: 0; animation: drop 1.1s 1.5s var(--ease) forwards;
+}
+.verse .note p { margin: 0 0 0 .95em; }
+.verse .note p:last-child { margin-left: 0; }
+.verse .note b { font-weight: normal; color: var(--cinnabar); margin-bottom: .55em; display: inline-block; }
 .verse.leaving { opacity: 0; transition: opacity .6s; }
 
 /* —— 对仗 —— */
@@ -318,6 +329,7 @@ body.scrolling #sbar { display: flex; }
   .tools button { padding: 6px 10px 7px; font-size: 12.5px; letter-spacing: .16em; text-indent: .16em; }
   .verse { right: 14px; top: 46%; }
   .verse .col { font-size: 19px; }
+  .verse .note { font-size: 11.5px; max-height: min(15em, 40vh); margin-right: 6px; padding-right: 8px; }
   .pair .line { font-size: 28px; }
   .chars { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; max-width: 100vw; padding: 6px 12px; scrollbar-width: none; }
   .chars::-webkit-scrollbar { display: none; }
