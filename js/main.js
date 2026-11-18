@@ -10,6 +10,7 @@
   /* 浏览器缓存里的 index.html 可能比这份脚本老：新添的几块若不在，就地补上，免得整页停摆 */
   if (!$('side')) document.body.insertAdjacentHTML('beforeend', '<div id="side"><button id="btn-undo" type="button">撤销</button><button id="btn-bake" type="button">固化</button><button id="btn-box" type="button">框选</button><span id="lay-top" class="lay"></span><button id="lay-bg" type="button" class="lay"></button></div>');
   if (!$('btn-box')) $('side').insertAdjacentHTML('beforeend', '<button id="btn-box" type="button">框选</button>');
+  if (!$('btn-style')) $('side').insertAdjacentHTML('beforeend', '<button id="btn-style" type="button">画风</button>');
   if (!$('guide')) document.body.insertAdjacentHTML('beforeend', '<div id="guide"><svg id="guide-svg"></svg><button type="button" id="guide-ok">开始</button></div>');
   const inkCanvas = $('ink'), stage = $('stage'), ime = $('ime');
   const ctx = stage.getContext('2d');
@@ -34,8 +35,8 @@
   const PIG = [[0.42, 0, 0], [0, 0.5, 0], [0, 0, 0.5]];
   /* 几个开关记在本机，下次打开还是上次的样子（默认值换过一轮，所以换了个名字存） */
   const PREFS = 'ciyuan.prefs2', KEYS = ['trace', 'hand', 'pinyin', 'wantSound', 'wantAuto'];
-  try { const p = JSON.parse(localStorage.getItem(PREFS) || '{}'); for (const k of KEYS) if (typeof p[k] === 'boolean') state[k] = p[k]; } catch (err) { /* 存不了就算了 */ }
-  function savePrefs() { try { const o = {}; for (const k of KEYS) o[k] = state[k]; localStorage.setItem(PREFS, JSON.stringify(o)); } catch (err) { /* 同上 */ } }
+  try { const p = JSON.parse(localStorage.getItem(PREFS) || '{}'); for (const k of KEYS) if (typeof p[k] === 'boolean') state[k] = p[k]; if (typeof p.style === 'string') state.style = p.style; } catch (err) { /* 存不了就算了 */ }
+  function savePrefs() { try { const o = {}; for (const k of KEYS) o[k] = state[k]; o.style = state.style; localStorage.setItem(PREFS, JSON.stringify(o)); } catch (err) { /* 同上 */ } }
 
   /* ---------- 尺寸 ---------- */
   function resize() {
@@ -67,6 +68,7 @@
         if (!def) return;
         const before = snap();
         world.spawn(key, bx, by);
+        if (MS.Style.name === 'sand') scatter(bx, by);
         record(before);
         Audio.bloom(def.kind, pan);
         afterSpawn(key);
@@ -294,6 +296,21 @@
     selClean();
     refreshSide();
   });
+  /* 画风：水墨 / 沙画。换的是调色盘、流体的成像与画布上的一层沙粒；物象照旧 */
+  function applyStyle() {
+    const name = MS.Style.set(state.style || 'ink'), sand = name === 'sand';
+    state.style = name;
+    fluid.sand = sand ? 1 : 0;
+    fluid.cfg.curl = sand ? 5 : 24; fluid.cfg.velDissipation = sand ? 1.7 : 0.55;      // 沙不像墨那样打旋，推一下就停
+    fluid.cfg.dyeDissipation = sand ? 0.2 : 0.14; fluid.cfg.negDissipation = sand ? 0.03 : null;   // 撒下的浮沙散得快些；手指划出的痕迹留得久
+    $('btn-style').textContent = '画风 · ' + MS.Style.label();
+    const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = sand ? (world.night ? '#0e0b0c' : '#f0cd8c') : (world.night ? '#080b10' : '#ece6d8');
+  }
+  $('btn-style').addEventListener('click', () => {
+    state.style = MS.Style.next(); applyStyle(); savePrefs();
+    Audio.play('splash', { pan: 0 }); Audio.play('stage', { idx: 2 });
+  });
+  MS.setStyle = (name) => { state.style = name; applyStyle(); };
   $('lay-bg').addEventListener('click', () => { world.locked = !world.locked; selClean(); refreshSide(); });
 
   /* ---------- 点选 / 框选物象：拖动移位，滚轮调远近 ---------- */
@@ -535,17 +552,19 @@
     const g = c.getContext('2d');
     fluid.render();
     if (fluid.ok) g.drawImage(inkCanvas, 0, 0);
-    else { g.fillStyle = world.night ? '#080b10' : '#ece6d8'; g.fillRect(0, 0, c.width, c.height); }
+    else { g.fillStyle = world.col('paper', 1); g.fillRect(0, 0, c.width, c.height); }
+    if (MS.Style.name === 'sand') g.filter = 'sepia(1) saturate(1.6)';          // 与 style.css 里 #stage 上的滤镜一致
     g.drawImage(stage, 0, 0, c.width, c.height);
+    g.filter = 'none';
     // 钤印、落款
     const k = c.width / state.W, s = 40 * k, x = c.width - s - 30 * k, y = c.height - s * 1.9 - 30 * k;
-    g.fillStyle = '#b0241e';
+    g.fillStyle = MS.Style.name === 'sand' ? '#8c3d16' : '#b0241e';
     g.beginPath(); g.roundRect ? g.roundRect(x, y, s, s * 1.9, 4 * k) : g.rect(x, y, s, s * 1.9); g.fill();
     g.fillStyle = '#f6ecdc'; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.font = (s * 0.62) + 'px "Ma Shan Zheng","STKaiti","KaiTi",serif';
     g.fillText('词', x + s / 2, y + s * 0.52); g.fillText('源', x + s / 2, y + s * 1.36);
     if (state.verse && !Scroll.active) {
-      g.fillStyle = world.night ? 'rgba(226,224,210,.75)' : 'rgba(30,28,26,.72)';
+      g.fillStyle = world.ink(0.74);
       g.font = (17 * k) + 'px "Ma Shan Zheng","STKaiti","KaiTi",serif';
       g.textAlign = 'right';
       g.fillText(state.verse + '　——' + (state.verseBy || '《声律启蒙》'), x - 16 * k, y + s * 1.55);
@@ -584,10 +603,40 @@
     if (sm === 'pan') { /* 拖的是卷子，不落墨 */ }
     else if (shift && !Scroll.active) splash(x, y);
     else if (state.writing) Hand.down(x, y);
+    else if (MS.Style.name === 'sand') { fluid.splat(x, y, 0, 0, [-0.5, 0, 0], 16); Audio.play('sand', { pan: (x / state.W * 2 - 1) * 0.7, vol: 0.04, dur: 0.16 }); }   // 沙画：指尖点开一个亮点
     else {
       fluid.splat(x, y, 0, 0, PIG[state.ink], 15);
       Audio.play('ink', { i: Math.round((1 - y / state.H) * 9), pan: (x / state.W * 2 - 1) * 0.7 });
     }
+  }
+  /* 沙画：手指把沙拨开——中间一道亮痕，两边各堆起一道沙埂 */
+  let sandT = 0, sweep = 0;
+  function sandStroke(x, y, vx, vy, sp) {
+    const dx = x - lastX, dy = y - lastY, len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len;
+    const steps = Math.min(8, Math.ceil(len / 9)) || 1, wd = 12 + clamp(sp / 1400, 0, 1) * 6;
+    for (let i = 1; i <= steps; i++) {
+      const u = i / steps, px = lastX + dx * u, py = lastY + dy * u;
+      fluid.splat(px, py, 0, 0, [-0.3, 0, 0], wd);
+      fluid.splat(px + nx * wd * 1.7, py + ny * wd * 1.7, 0, 0, [0.26, 0, 0], wd * 0.4);
+      fluid.splat(px - nx * wd * 1.7, py - ny * wd * 1.7, 0, 0, [0.26, 0, 0], wd * 0.4);
+    }
+    const t = performance.now();
+    if (t - sandT > 170 && sp > 60) { sandT = t; Audio.play('sand', { pan: (x / state.W * 2 - 1) * 0.7, vol: 0.03 + clamp(sp / 2400, 0, 1) * 0.05, dur: 0.3 }); }
+  }
+  /* 沙画：字化成物时，四周撒一把沙 */
+  function scatter(x, y) {
+    for (let k = 0; k < 14; k++) {
+      const a = Math.random() * 6.2832, r = 24 + Math.random() * 90;
+      fluid.splat(x + Math.cos(a) * r, y + Math.sin(a) * r, 0, 0, [0.03 + Math.random() * 0.05, 0, 0], 4 + Math.random() * 6);
+    }
+    Audio.play('sand', { pan: (x / state.W * 2 - 1) * 0.7, vol: 0.05, dur: 0.55 });
+  }
+  /* 沙画：清空时一掌从左抹到右，推着一道沙 */
+  function sweepStep(dt) {
+    if (sweep <= 0) return;
+    const sx = (-0.12 + 1.24 * (sweep / 0.9)) * state.W;
+    for (let j = 0; j < 7; j++) fluid.splat(sx, state.H * (j + 0.5) / 7, 2400, (Math.random() - 0.5) * 300, [0.032, 0, 0], 64);
+    sweep += dt; if (sweep > 0.9) sweep = 0;
   }
   function splash(x, y) {
     fluid.wash(x, y, 110, 0.72);
@@ -621,6 +670,7 @@
     else if (state.down) {
       if (e.shiftKey) splash(x, y);
       else if (state.hand && !Scroll.active) Hand.move(x, y);
+      else if (MS.Style.name === 'sand') sandStroke(x, y, vx, vy, sp);
       else {
         const k = clamp(sp / 900, 0.25, 1), p = PIG[state.ink];
         const steps = Math.min(6, Math.ceil(Math.hypot(x - lastX, y - lastY) / 14)) || 1;
@@ -629,7 +679,7 @@
           fluid.splat(lastX + (x - lastX) * u, lastY + (y - lastY) * u, vx * 0.9 / steps, vy * 0.9 / steps, [p[0] * k / steps * 1.6, p[1] * k / steps * 1.6, p[2] * k / steps * 1.6], 13 + k * 9);
         }
       }
-    } else if (sp > 40 && e.pointerType === 'mouse') {
+    } else if (sp > 40 && e.pointerType === 'mouse' && MS.Style.name !== 'sand') {
       fluid.splat(x, y, vx * 0.22, vy * 0.22, null, 34);       // 笔未落，气已动
     }
     lastX = x; lastY = y; lastT = t;
@@ -779,6 +829,7 @@
       ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
       ctx.clearRect(0, 0, state.W, state.H);
       Scroll.draw(ctx);
+      MS.Style.grain(ctx, state.W, state.H, Scroll.cam ? Scroll.cam.n : 0);
       Hand.update(dt);
       if (Scroll.active) Hand.draw(ctx, Scroll.vol.secs[Math.max(0, Scroll.cur | 0)].world);   // 写在画上的字
       Glyphs.draw(ctx);
@@ -793,11 +844,13 @@
     world.update(dt);
     Eggs.update(dt);
     Glyphs.update(dt);
+    sweepStep(dt);
     fluid.step(dt);
     fluid.render();
     ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
     ctx.clearRect(0, 0, state.W, state.H);
     world.draw(ctx);
+    MS.Style.grain(ctx, state.W, state.H, world.nightK);          // 沙画：给物象打上沙粒（选框、字、题注不打）
     drawSel();
     Hand.draw(ctx, world);
     Glyphs.draw(ctx);
@@ -806,6 +859,7 @@
     if (world.events.length) {
       for (const ev of world.events) {
         if (ev.x != null) ev.pan = (ev.x / state.W * 2 - 1) * 0.7;
+        if (ev.type === 'clear' && MS.Style.name === 'sand') { sweep = 0.001; Audio.play('sand', { vol: 0.11, dur: 1.1 }); }
         Audio.play(ev.type, ev);
       }
       world.events.length = 0;
@@ -814,7 +868,7 @@
     const nc = world.nightK > 0.5;
     if (nc !== nightClass) { nightClass = nc; document.body.classList.toggle('night', nc); document.querySelector('meta[name=theme-color]').content = nc ? '#080b10' : '#ece6d8'; }
   }
-  applyModes();
+  applyModes(); applyStyle();
   requestAnimationFrame(frame);
 
   /* ---------- 开卷：题名二字，化入纸中 ---------- */

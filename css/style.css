@@ -15,6 +15,22 @@ body.night {
   --cinnabar-deep: #b0241e;
 }
 
+/* 沙画：灯箱的暖光作底，深褐的沙作字；夜里灯熄，沙泛月色 */
+body.sand {
+  --paper: #f0cd8c;
+  --ink: 54, 33, 15;
+  --cinnabar: #8c3d16;
+  --cinnabar-deep: #6e2e10;
+}
+body.sand.night {
+  --paper: #0e0b0c;
+  --ink: 236, 212, 168;
+  --cinnabar: #d98a4a;
+  --cinnabar-deep: #b56a30;
+}
+/* 物象里写死的颜色（月的冷白、梅的朱红）一并收成沙色，只留一点原来的色相 */
+body.sand #stage { filter: sepia(1) saturate(1.6); }
+
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; overflow: hidden; }
 body {
@@ -367,7 +383,7 @@ body.night #side button, body.night #side .lay { background: rgba(8, 11, 16, .34
 #side button:hover { border-color: rgba(var(--ink), .6); color: rgba(var(--ink), .95); }
 #side button:disabled { opacity: .36; cursor: default; }
 #side #lay-bg[aria-pressed="true"] { border-color: rgba(var(--ink), .5); background: rgba(var(--ink), .1); }
-#side #lay-bg { grid-column: span 2; }
+#side #lay-bg, #side #btn-style { grid-column: span 2; }
 #side #btn-box[aria-pressed="true"] { background: var(--cinnabar); border-color: var(--cinnabar); color: #f8efe0; }
 body.boxing #stage { cursor: crosshair; }
 /* 按住字钮拖到画里：跟着笔尖走的那个字 */
@@ -402,7 +418,7 @@ body.scrolling #side { display: none; }
 @media (max-width: 760px) {
   .chars { max-width: 100vw; }
   #side { left: 10px; bottom: 96px; grid-template-columns: auto auto; }
-  #side #lay-bg { grid-column: auto; }
+  #side #lay-bg, #side #btn-style { grid-column: auto; }
   #guide-svg text { font-size: 11.5px; letter-spacing: .02em; }
   .tools button[data-tip]::after { display: none; }
 }

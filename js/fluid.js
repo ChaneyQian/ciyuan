@@ -69,6 +69,7 @@
       uniform vec2 dyeTexelSize;
       uniform float dt;
       uniform float dissipation;
+      uniform float negDiss;
       uniform float manual;
       vec4 bilerp (sampler2D sam, vec2 uv, vec2 tsize) {
         vec2 st = uv / tsize - 0.5;
@@ -89,7 +90,9 @@
           vec2 coord = vUv - dt * texture2D(uVelocity, vUv).xy * texelSize;
           result = texture2D(uSource, coord);
         }
-        gl_FragColor = result / (1.0 + dissipation * dt);
+        vec4 k = vec4(dissipation);
+        if (negDiss >= 0.0) k = mix(k, vec4(negDiss), vec4(lessThan(result, vec4(0.0))));   // 负值（沙画里手指拨开的痕）另有消退的快慢
+        gl_FragColor = result / (1.0 + k * dt);
       }`,
 
     divergence: `
@@ -179,6 +182,7 @@
       uniform float night;
       uniform float time;
       uniform vec3 tint;
+      uniform float sand;
       float hash (vec2 p) {
         p = fract(p * vec2(123.34, 456.21));
         p += dot(p, p + 45.32);
@@ -205,6 +209,33 @@
         vec3 dl = texture2D(uDye, vL).rgb, dr = texture2D(uDye, vR).rgb;
         vec3 dt = texture2D(uDye, vT).rgb, db = texture2D(uDye, vB).rgb;
         float tot = d.r + d.g + d.b;
+        if (sand > 0.5) {
+          // —— 沙画：灯箱上的沙。墨的浓淡变成沙粒的疏密；沙不透光，厚处一层压一层
+          vec2 cell = floor(px / 1.5);
+          float g1 = hash(cell), g2 = hash(cell + 17.3);
+          float glow = 1.0 - smoothstep(0.08, 0.92, length(q * vec2(1.0, 1.12)));
+          float lamp = vnoise(px * 0.005) * 0.07 - 0.035;                         // 灯管不匀
+          float wipe = smoothstep(0.06, 0.2, -texture2D(uDye, vUv).r);           // 手指拨开的地方：沙量记成负的
+          vec3 light = (mix(vec3(0.66, 0.38, 0.15), vec3(1.0, 0.88, 0.62), glow) + lamp) * tint * (1.0 + 0.09 * wipe);
+          float amt = d.r * 2.7 + d.g * 2.1 + d.b * 2.1;
+          float sweep = vnoise(vec2(px.x * 0.0035 + px.y * 0.0012, px.y * 0.028 - px.x * 0.006));   // 手掌扫过留下的一道道
+          float thin = 0.045 + 0.05 * smoothstep(0.4, 0.9, sweep) + 0.05 * (1.0 - glow) * (1.0 - glow);   // 台面先铺一层薄沙，扫得不匀，边上更厚
+          float cover = 1.0 - exp(-amt * 1.7) + thin * (1.0 - wipe);
+          float on = step(g1, cover);
+          float thick = smoothstep(0.45, 1.0, cover);
+          float gx = (dr.r + dr.g + dr.b) - (dl.r + dl.g + dl.b), gy = (dt.r + dt.g + dt.b) - (db.r + db.g + db.b);
+          float rim = clamp((gy - gx) * 0.9, -0.25, 0.25);                        // 沙堆迎光的一侧略亮
+          vec3 grainc = mix(vec3(0.40, 0.23, 0.09), vec3(0.14, 0.075, 0.03), thick) * (0.78 + 0.44 * g2);
+          grainc += d.g * vec3(0.20, 0.02, 0.0) + d.b * vec3(0.0, 0.05, 0.04) + rim * vec3(0.22, 0.14, 0.06);
+          vec3 sday = mix(light, grainc, on * mix(0.8, 1.0, thick));
+          // 夜：灯箱熄了，沙自己泛着月色
+          vec3 nbg = vec3(0.052, 0.042, 0.046) * (0.55 + 0.7 * glow) * (1.0 - 0.45 * wipe);
+          vec3 ngrain = vec3(0.90, 0.80, 0.62) * (0.55 + 0.5 * g2) * mix(0.75, 1.0, thick);
+          ngrain += d.g * vec3(0.10, -0.06, -0.10) + d.b * vec3(-0.12, 0.0, 0.06);
+          vec3 snight = mix(nbg, ngrain, on * mix(0.5, 1.0, thick));
+          gl_FragColor = vec4(mix(sday, snight, night), 1.0);
+          return;
+        }
         float edge = length(vec2((dr.r + dr.g + dr.b) - (dl.r + dl.g + dl.b),
                                  (dt.r + dt.g + dt.b) - (db.r + db.g + db.b)));
         float pool = 1.0 + 0.7 * edge / (0.4 + tot);
@@ -474,12 +505,14 @@
     gl.uniform1i(u.uSource, this._bind(0, vel.read));
     gl.uniform1f(u.dt, dt);
     gl.uniform1f(u.dissipation, c.velDissipation);
+    gl.uniform1f(u.negDiss, -1);
     this._blit(vel.write); vel.swap();
 
     gl.uniform2f(u.dyeTexelSize, this.dye.tx, this.dye.ty);
     gl.uniform1i(u.uVelocity, this._bind(0, vel.read));
     gl.uniform1i(u.uSource, this._bind(1, this.dye.read));
     gl.uniform1f(u.dissipation, c.dyeDissipation);
+    gl.uniform1f(u.negDiss, c.negDissipation == null ? -1 : c.negDissipation);
     this._blit(this.dye.write); this.dye.swap();
   };
 
@@ -489,6 +522,7 @@
     gl.uniform2f(u.texelSize, this.dye.tx, this.dye.ty);
     gl.uniform2f(u.resolution, gl.drawingBufferWidth, gl.drawingBufferHeight);
     gl.uniform1f(u.night, this.night);
+    gl.uniform1f(u.sand, this.sand || 0);
     gl.uniform1f(u.time, (performance.now() - this.t0) / 1000);
     gl.uniform3f(u.tint, this.tint[0], this.tint[1], this.tint[2]);
     gl.uniform1i(u.uDye, this._bind(0, this.dye.read));

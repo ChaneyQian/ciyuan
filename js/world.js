@@ -134,7 +134,7 @@
   World.prototype.resize = function (W, H) { this.W = W; this.H = H; };
 
   World.prototype.col = function (name, a) {
-    const p = PAL[name] || PAL.ink, k = this.nightK;
+    const P = (MS.Style && MS.Style.pal) || PAL, p = P[name] || P.ink, k = this.nightK;
     const r = Math.round(lerp(p[0][0], p[1][0], k)), g = Math.round(lerp(p[0][1], p[1][1], k)), b = Math.round(lerp(p[0][2], p[1][2], k));
     return 'rgba(' + r + ',' + g + ',' + b + ',' + (a == null ? 1 : a) + ')';
   };
@@ -161,7 +161,10 @@
 
   World.prototype.emit = function (type, data) { this.events.push(Object.assign({ type }, data || {})); };
   World.prototype.stir = function (x, y, vx, vy, r) { this.fluid.splat(x, y, vx, vy, null, r); };
-  World.prototype.dye = function (x, y, pig, r, vx, vy) { this.fluid.splat(x, y, vx || 0, vy || 0, pig, r); };
+  World.prototype.dye = function (x, y, pig, r, vx, vy) {
+    if (this.lit && pig) pig = [-(pig[0] + pig[1] + pig[2]) * 0.8, 0, 0];   // 沙画里发光之物放出来的不是沙，是光：把四周的沙照开
+    this.fluid.splat(x, y, vx || 0, vy || 0, pig, r);
+  };
 
   /* 落字成灵 */
   World.prototype.spawn = function (ch, x, y) {
@@ -261,7 +264,7 @@
       if (e.age > e.life) e.dying = true;
       if (e.dying) e.fade -= dt / 1.8;
       const K = MS.Kinds[e.kind];
-      if (K && K.update) K.update(e, dt, this);
+      if (K && K.update) { this.lit = !!(MS.Style && MS.Style.lit(e.kind)); K.update(e, dt, this); this.lit = false; }
     }
     if (this.ents.some((e) => e.fade <= 0)) this.ents = this.ents.filter((e) => e.fade > 0);
 
@@ -307,7 +310,9 @@
         if (sc < 1) al *= 0.55 + 0.45 * clamp((sc - 0.3) / 0.7, 0, 1);
       }
       ctx.globalAlpha = al;
+      const lit = MS.Style && MS.Style.enter(e, ctx, this);   // 沙画：发光之物是擦亮的玻璃
       K.draw(e, ctx, this);
+      if (lit) MS.Style.leave();
       ctx.restore();
     }
     // 飘落
@@ -518,7 +523,7 @@
       return c;
     },
     draw(e, ctx, w) {
-      const night = w.nightK > 0.5, key = night ? 'n' : 'd';
+      const night = w.nightK > 0.5, key = (night ? 'n' : 'd') + (MS.Style ? MS.Style.name : '');   // 换了画法，山要重画
       if (!e.cache[key]) e.cache[key] = this.render(e, w, night);
       const c = e.cache[key], g = ease(e.age / 3.2), a0 = ctx.globalAlpha * g * (night ? 0.8 : 1);
       // 山脚大致落在落字处之下
