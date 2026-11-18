@@ -492,9 +492,9 @@
     ctx.restore();
 
     // —— 装裱：上下绫边
-    const night = S.cam.n > 0.5;
+    const night = S.cam.n > 0.5, sand = MS.Style && MS.Style.name === 'sand';      // 沙画里绫边是堆在两头的两道厚沙
     for (const y of [0, H - bh]) {
-      ctx.fillStyle = night ? 'rgba(30,34,40,0.96)' : 'rgba(205,193,160,0.96)';
+      ctx.fillStyle = sand ? (night ? 'rgba(26,19,14,0.97)' : 'rgba(78,47,21,0.94)') : night ? 'rgba(30,34,40,0.96)' : 'rgba(205,193,160,0.96)';
       ctx.fillRect(W / 2 - hw, y, hw * 2, bh);
       ctx.fillStyle = night ? 'rgba(226,224,210,0.2)' : 'rgba(60,50,36,0.3)';
       ctx.fillRect(W / 2 - hw, y ? y : bh - 1.2, hw * 2, 1.2);

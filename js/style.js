@@ -77,7 +77,7 @@
   /* 在已经画好物象的 2D 画布上打沙粒。ctx 的坐标是 CSS 像素；night 0..1 */
   S.grain = function (ctx, W, H, night) {
     if (S.name !== 'sand') return;
-    if (!holes) holes = tile((d, i) => { const r = Math.random(); d[i] = d[i + 1] = d[i + 2] = 0; d[i + 3] = r < 0.26 ? 90 + Math.random() * 165 : r < 0.5 ? Math.random() * 70 : 0; });   // 漏光的孔
+    if (!holes) holes = tile((d, i) => { const r = Math.random(); d[i] = d[i + 1] = d[i + 2] = 0; d[i + 3] = r < 0.16 ? 90 + Math.random() * 165 : r < 0.36 ? Math.random() * 60 : 0; });   // 漏光的孔（太密了淡的笔画就散了）
     const key = night > 0.5 ? 'n' : 'd';
     if (speckKey !== key) {                                                      // 深浅不匀的粒：有的更暗，有的反光
       speckKey = key;

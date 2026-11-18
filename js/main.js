@@ -617,8 +617,8 @@
     for (let i = 1; i <= steps; i++) {
       const u = i / steps, px = lastX + dx * u, py = lastY + dy * u;
       fluid.splat(px, py, 0, 0, [-0.3, 0, 0], wd);
-      fluid.splat(px + nx * wd * 1.7, py + ny * wd * 1.7, 0, 0, [0.26, 0, 0], wd * 0.4);
-      fluid.splat(px - nx * wd * 1.7, py - ny * wd * 1.7, 0, 0, [0.26, 0, 0], wd * 0.4);
+      fluid.splat(px + nx * wd * 1.6, py + ny * wd * 1.6, 0, 0, [0, -0.22, 0], wd * 0.45);   // 沙埂记在第二路的负值里：不随浮沙散去
+      fluid.splat(px - nx * wd * 1.6, py - ny * wd * 1.6, 0, 0, [0, -0.22, 0], wd * 0.45);
     }
     const t = performance.now();
     if (t - sandT > 170 && sp > 60) { sandT = t; Audio.play('sand', { pan: (x / state.W * 2 - 1) * 0.7, vol: 0.03 + clamp(sp / 2400, 0, 1) * 0.05, dur: 0.3 }); }

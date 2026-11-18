@@ -217,9 +217,10 @@
           float lamp = vnoise(px * 0.005) * 0.07 - 0.035;                         // 灯管不匀
           float wipe = smoothstep(0.06, 0.2, -texture2D(uDye, vUv).r);           // 手指拨开的地方：沙量记成负的
           vec3 light = (mix(vec3(0.66, 0.38, 0.15), vec3(1.0, 0.88, 0.62), glow) + lamp) * tint * (1.0 + 0.09 * wipe);
-          float amt = d.r * 2.7 + d.g * 2.1 + d.b * 2.1;
+          float ridge = max(-texture2D(uDye, vUv).g, 0.0) * (1.0 - wipe);        // 沙埂：拨到两边堆起来的沙，记在另一路的负值里，和指痕一样留得久
+          float amt = d.r * 2.7 + d.g * 2.1 + d.b * 2.1 + ridge * 3.2;
           float sweep = vnoise(vec2(px.x * 0.0035 + px.y * 0.0012, px.y * 0.028 - px.x * 0.006));   // 手掌扫过留下的一道道
-          float thin = 0.045 + 0.05 * smoothstep(0.4, 0.9, sweep) + 0.05 * (1.0 - glow) * (1.0 - glow);   // 台面先铺一层薄沙，扫得不匀，边上更厚
+          float thin = 0.032 + 0.045 * smoothstep(0.4, 0.9, sweep) + 0.05 * (1.0 - glow) * (1.0 - glow);   // 台面先铺一层薄沙，扫得不匀，边上更厚
           float cover = 1.0 - exp(-amt * 1.7) + thin * (1.0 - wipe);
           float on = step(g1, cover);
           float thick = smoothstep(0.45, 1.0, cover);
@@ -233,7 +234,8 @@
           vec3 ngrain = vec3(0.90, 0.80, 0.62) * (0.55 + 0.5 * g2) * mix(0.75, 1.0, thick);
           ngrain += d.g * vec3(0.10, -0.06, -0.10) + d.b * vec3(-0.12, 0.0, 0.06);
           vec3 snight = mix(nbg, ngrain, on * mix(0.5, 1.0, thick));
-          gl_FragColor = vec4(mix(sday, snight, night), 1.0);
+          float nn = smoothstep(0.0, 0.82, night);                               // 卷里的夜只到八分：沙画里灯箱这时已经熄尽，不留半明半暗的浑色
+          gl_FragColor = vec4(mix(sday, snight, nn), 1.0);
           return;
         }
         float edge = length(vec2((dr.r + dr.g + dr.b) - (dl.r + dl.g + dl.b),
