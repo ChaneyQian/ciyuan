@@ -5,18 +5,33 @@
  *   笛 / 箫      · 气声 + 倚音 + 颤音；笛亮箫幽
  *   编钟 / 磬    · 非谐泛音的金石之声
  *   鼓 / 木鱼
- * 音高一律取五声音阶（宫商角徵羽）。四时换调：春-角 夏-徵 秋-商 冬-羽，平日为宫。
- * 平仄入乐：平声字奏平直的长音，仄声字奏带滑音的折音。
+ *   二胡 erhu    · 拉弦：一弓到底，音与音之间滑过去，长音上揉弦
+ *   弦乐 strings · 几把胡琴齐奏的长音，垫在底下定调
+ *   唢呐 suona   · 双簧：亮而带鼻音，起音从下方扑上来，吐音、花舌
+ *
+ * 乐理：
+ *   五音  宫商角徵羽按「三分损益」相生（宫→徵→商→羽→角），比例 1 · 9/8 · 81/64 · 3/2 · 27/16，不用十二平均律。
+ *   调式  以哪个音为主音就是哪个调式。四时换调：春-角 夏-徵 秋-商 冬-羽，平日为宫。
+ *   旋宫  每起一支小曲，宫音沿五度圈随机挪一步（C–G–D–A–E 之内）：相邻两宫只差一个音，换得不觉。
+ *   曲式  底乐的小曲四句「起承转合」：起、承句首尾相衔（鱼咬尾），转句翻高，合句落回主音；
+ *         旋律以级进为主、偶有跳进；一句两小节，一板三眼；重复时「加花」。
+ *   变化  每次落字的那一声都略有不同：移几级、快慢、微小的音高出入、装饰音，都由随机数定。
+ * 平仄入乐：平声字奏平直的长音；仄声字随机取上、去、入三样——上扬、下折、短促。
  */
 (function () {
   'use strict';
   const MS = (window.MS = window.MS || {});
-  const PENT = [0, 2, 4, 7, 9];                 // 宫 商 角 徵 羽（以 D 为宫）
+  const LU = [1, 9 / 8, 81 / 64, 3 / 2, 27 / 16];   // 宫 商 角 徵 羽：三分损益，五度相生
   const MODES = { '': 0, '秋': 1, '春': 2, '夏': 3, '冬': 4 };
-  const BASE = 146.83;                           // D3
+  const MODE_NAME = ['宫', '商', '角', '徵', '羽'];
+  const BASE = 146.83;                           // D3：平日以 D 为宫（二胡内弦也定在 D）
+  const KEYS = [[-2, 'C'], [5, 'G'], [0, 'D'], [-5, 'A'], [2, 'E']];   // 五度圈上相邻的五个宫：[离 D 几律, 名]
   const A = {
     enabled: false, ready: false, mode: 0, ctx: null,
-    walk: 5, nextNote: 2, bed: 0
+    walk: 5, nextNote: 2, bed: 0,
+    key: 2, gong: 0,                             // 现在以哪一律为宫
+    shift: 0, rate: 1, cents: 0,                 // 这一声的随机变化：移几级、快慢、音高出入（音分）
+    tune: null, idle: 0, gap: 3
   };
 
   function init() {
@@ -63,9 +78,11 @@
 
   /* 第 i 级音（i=0 为当前调式的主音，可为负） */
   function freq(i) {
-    const k = i + A.mode, oct = Math.floor(k / 5), deg = ((k % 5) + 5) % 5;
-    return BASE * Math.pow(2, (PENT[deg] + 12 * oct) / 12);
+    const k = i + A.mode + A.shift, oct = Math.floor(k / 5), deg = ((k % 5) + 5) % 5;
+    return BASE * Math.pow(2, A.gong / 12 + oct) * LU[deg];
   }
+  /* 支持音：主音上方的五度（角调式上方没有纯五度，取上四度） */
+  const support = () => (A.mode === 2 ? 2 : 3);
   function out(node, pan, send) {
     const ctx = A.ctx;
     let last = node;
@@ -105,7 +122,7 @@
     const P = { zheng: [3.2, 0.85, 0.5, 0.9985], qin: [5.5, 0.3, 0.5, 0.9993], pipa: [1.1, 1.0, 0.5, 0.994] }[kind];
     const buf = ksBuffer(f, P[0], P[1], P[2], P[3]), ctx = A.ctx;
     const src = ctx.createBufferSource(); src.buffer = buf;
-    const r = f / buf._f, pr = src.playbackRate;
+    const r = f / buf._f * Math.pow(2, (A.cents + (Math.random() - 0.5) * 5) / 1200), pr = src.playbackRate;
     pr.setValueAtTime(r, t);
     if (o.slide) { pr.setValueAtTime(r * Math.pow(2, o.slide / 12), t); pr.exponentialRampToValueAtTime(r, t + 0.22); }
     if (o.bend) { pr.setValueAtTime(r, t + 0.06); pr.exponentialRampToValueAtTime(r * Math.pow(2, o.bend / 12), t + 0.26); pr.exponentialRampToValueAtTime(r, t + 0.62); }
@@ -114,7 +131,7 @@
       for (let i = 0; i < n; i++) curve[i] = r * (1 + Math.sin(i / n * Math.PI * 2 * 5) * 0.011 * (1 - i / n));
       try { pr.setValueCurveAtTime(curve, t + (o.bend ? 0.7 : 0.3), 1.3); } catch (err) { /* 与其它自动化重叠时忽略 */ }
     }
-    const g = ctx.createGain(); g.gain.value = (o.vol == null ? 0.5 : o.vol);
+    const g = ctx.createGain(); g.gain.value = (o.vol == null ? 0.5 : o.vol) * (0.9 + Math.random() * 0.2);
     const body = ctx.createBiquadFilter(); body.type = 'peaking';
     body.frequency.value = kind === 'qin' ? 190 : kind === 'pipa' ? 620 : 320; body.Q.value = 1.1; body.gain.value = 5;
     const lpf = ctx.createBiquadFilter(); lpf.type = 'lowpass'; lpf.frequency.value = kind === 'qin' ? 2600 : 7800;
@@ -163,6 +180,75 @@
     const ng = ctx.createGain(); ng.gain.value = xiao ? 0.5 : 0.22;
     n.connect(bp); bp.connect(ng); ng.connect(g); n.start(t, Math.random()); n.stop(t + dur + 0.4);
     out(g, o.pan, xiao ? 0.7 : 0.45);
+  }
+
+  /* ---------- 二胡 / 弦乐 / 唢呐：一条连着的声线 ----------
+   * notes: [[频率|null(休止), 时值, {slur 连, bow 换弓, grace 倚音(半音), fall 尾音下滑(半音), flutter 花舌, acc 重音}], ...]
+   * 二胡与弦乐是连弓：音与音之间滑过去（滑音），长音渐起揉弦；唢呐逐音吐奏，起音自下方扑上，揉音快而深。
+   */
+  const TIMBRE = {
+    erhu: { waves: [['sawtooth', 1, 0], ['square', 0.28, 0]], hp: 250, peaks: [[560, 4, 1.2], [1150, 9, 1.6], [2400, 5, 2.2]], lp: 5200,
+      att: 0.07, rel: 0.16, vibHz: 5.8, vib: 26, vibDelay: 0.22, glide: 0.13, scoop: -0.6, noise: 0.03, legato: true, send: 0.5, vol: 0.11 },
+    strings: { waves: [['sawtooth', 1, -8], ['sawtooth', 1, 7], ['sawtooth', 0.7, 0]], hp: 120, peaks: [[420, 4, 1], [900, 4, 1.2]], lp: 2300,
+      att: 0.5, rel: 0.9, vibHz: 5, vib: 9, vibDelay: 0.6, glide: 0.2, scoop: 0, noise: 0.012, legato: true, send: 0.7, vol: 0.05 },
+    suona: { waves: [['sawtooth', 1, 0], ['square', 0.55, 0]], hp: 520, peaks: [[1450, 11, 2.2], [2900, 8, 2.6], [4300, 4, 3]], lp: 7600,
+      att: 0.025, rel: 0.07, vibHz: 6.6, vib: 34, vibDelay: 0.1, glide: 0.05, scoop: -1.6, noise: 0.03, legato: false, send: 0.35, vol: 0.06 }
+  };
+  function sing(kind, notes, t, o) {
+    o = o || {};
+    const ctx = A.ctx, T = TIMBRE[kind], v = (o.vol == null ? T.vol : o.vol) * (0.92 + Math.random() * 0.16);
+    const total = notes.reduce((a, n) => a + n[1], 0), end = t + total;
+    const mix = ctx.createGain(), g = ctx.createGain(), trem = ctx.createGain();
+    g.gain.setValueAtTime(0, t);
+    let last = mix;
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = T.hp; last.connect(hp); last = hp;
+    for (const [pf, pg, pq] of T.peaks) { const b = ctx.createBiquadFilter(); b.type = 'peaking'; b.frequency.value = pf; b.gain.value = pg; b.Q.value = pq; last.connect(b); last = b; }
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = T.lp; last.connect(lp); lp.connect(g); g.connect(trem);
+    // 揉弦 / 气颤：加在音分上，深浅随音的长短
+    const lfo = ctx.createOscillator(), vg = ctx.createGain(); lfo.frequency.value = T.vibHz * (0.94 + Math.random() * 0.12); vg.gain.setValueAtTime(0, t); lfo.connect(vg);
+    // 花舌：很快的音量颤动
+    const am = ctx.createOscillator(), ag = ctx.createGain(); am.frequency.value = 27; ag.gain.setValueAtTime(0, t); am.connect(ag); ag.connect(trem.gain);
+    const oscs = T.waves.map(([type, amp, det]) => {
+      const os = ctx.createOscillator(), og = ctx.createGain();
+      os.type = type; os.detune.value = det + A.cents + (Math.random() - 0.5) * 6; og.gain.value = amp;
+      vg.connect(os.detune); os.connect(og); og.connect(mix);
+      return os;
+    });
+    const setF = (f, at) => oscs.forEach((os) => os.frequency.setValueAtTime(f, at));
+    const rampF = (f, at) => oscs.forEach((os) => os.frequency.exponentialRampToValueAtTime(f, at));
+    const nz = ctx.createBufferSource(); nz.buffer = A.noise; nz.loop = true;                      // 弓毛擦弦 / 哨片的气声
+    const nb = ctx.createBiquadFilter(); nb.type = 'bandpass'; nb.frequency.value = kind === 'suona' ? 3400 : 2600; nb.Q.value = 0.8;
+    const ng = ctx.createGain(); ng.gain.value = T.noise; nz.connect(nb); nb.connect(ng); ng.connect(g);
+    let s = t, prev = null;
+    for (let n = 0; n < notes.length; n++) {
+      const f = notes[n][0], d = notes[n][1], fl = notes[n][2] || {}, tie = notes[n + 1] && notes[n + 1][2] && notes[n + 1][2].slur;
+      if (f == null) { g.gain.setTargetAtTime(0, s, T.rel / 3); prev = null; s += d; continue; }
+      const fresh = prev == null || (!T.legato && !fl.slur);
+      if (fresh) {                                                                                 // 起音：自下方（或自倚音）滑入
+        const from = f * Math.pow(2, (fl.grace != null ? fl.grace : T.scoop) / 12);
+        setF(from, s); if (from !== f) rampF(f, s + (fl.grace != null ? 0.07 : 0.06)); else setF(f, s);
+      } else {                                                                                     // 连弓：从上一个音滑过来
+        setF(prev, s); rampF(f, s + Math.min(T.glide * (0.6 + Math.random() * 0.8), d * 0.45));
+      }
+      let tail = f;
+      if (fl.fall) { tail = f * Math.pow(2, fl.fall / 12); setF(f, s + d * 0.62); rampF(tail, s + d); }
+      const lv = v * (fl.acc || 1);
+      if (fresh) g.gain.setTargetAtTime(lv, s, T.att / 3);
+      else if (fl.bow || Math.random() < 0.3) { g.gain.setTargetAtTime(lv * 0.45, Math.max(t, s - 0.03), 0.012); g.gain.setTargetAtTime(lv, s + 0.015, T.att / 3); }   // 换弓：音量略一顿
+      else g.gain.setTargetAtTime(lv, s, 0.05);
+      if (d > 0.7) { g.gain.setTargetAtTime(lv * 1.16, s + d * 0.25, d * 0.2); g.gain.setTargetAtTime(lv * 0.8, s + d * 0.7, d * 0.18); }      // 长音：中间鼓一下，再收
+      if (!T.legato && !tie) g.gain.setTargetAtTime(0, s + d - 0.04, 0.012);                // 吐音：音与音断开
+      vg.gain.setTargetAtTime(0, s, 0.03);
+      if (d > 0.36) vg.gain.setTargetAtTime(T.vib * (0.7 + Math.random() * 0.6) * (o.vib == null ? 1 : o.vib), s + T.vibDelay, 0.12);
+      if (fl.flutter) { ag.gain.setTargetAtTime(0.45, s + 0.05, 0.02); ag.gain.setTargetAtTime(0, s + d - 0.05, 0.02); }
+      prev = tail; s += d;
+    }
+    g.gain.setTargetAtTime(0, end, T.rel / 3);
+    const stop = end + T.rel * 2 + 0.3;
+    for (const n of oscs.concat([lfo, am])) { n.start(t); n.stop(stop); }
+    nz.start(t, Math.random()); nz.stop(stop);
+    out(trem, o.pan, o.send == null ? T.send : o.send);
+    return end;
   }
 
   /* ---------- 金石：编钟、磬 ---------- */
@@ -257,17 +343,24 @@
     const n = (dur * 13) | 0;
     for (let k = 0; k < n; k++) pluck(kind, freq(i), t + k / 13 + R(0, 0.012), { vol: vol * (0.55 + 0.45 * Math.sin(Math.PI * k / n)), pan, send: 0.25 });
   }
-  function phrase(inst, notes, t, o) {                  // notes: [[级, 时值], ...]
+  function phrase(inst, notes, t, o) {                  // notes: [[级, 时值, 旗标?], ...]
+    if (TIMBRE[inst]) return sing(inst, notes.map(([i, d, fl]) => [i == null ? null : freq(i + 5), d * A.rate, fl]), t, o);   // 二胡、唢呐：整句一条声线
     let tt = t;
-    for (const [i, d] of notes) {
+    for (const [i, d0] of notes) {
+      const d = d0 * A.rate;
       if (i != null) {
         if (inst === 'di') flute(freq(i + 10), tt, d * 0.92, Object.assign({ grace: Math.random() < 0.5 ? -2 : 0 }, o));
         else if (inst === 'xiao') flute(freq(i + 5), tt, d * 0.96, Object.assign({ xiao: true }, o));
-        else pluck(inst, freq(i), tt, o);
+        else pluck(inst, freq(i), tt, Math.random() < 0.14 && !(o && (o.bend || o.slide)) ? Object.assign({ slide: Math.random() < 0.5 ? -2 : 2 }, o) : o);   // 偶尔带一个上下滑的装饰
       }
       tt += d;
     }
     return tt;
+  }
+
+  /* 雄鸡一声：唢呐学它——两声短的，一声拔高拖长，尾巴落下来 */
+  function crow(t, pan) {
+    sing('suona', [[freq(7), 0.16], [freq(9), 0.2], [freq(12), 0.95, { grace: -4, flutter: true, fall: -5 }]], t, { vol: 0.055, pan });
   }
 
   /* 字落成灵时，各奏各的声 */
@@ -311,9 +404,12 @@
     duck: (t, p) => { flute(freq(9), t, 0.22, { xiao: true, vol: 0.1, fall: -2, pan: p }); flute(freq(7), t + 0.34, 0.3, { xiao: true, vol: 0.09, fall: -3, pan: p }); },
     feather: (t, p) => { for (let k = 0; k < 3; k++) harmonic(freq(19 - k * 2), t + k * 0.28, { vol: 0.1, pan: p + R(-0.2, 0.2), dur: 1.2 }); },
     pearl: (t, p) => { bell(freq(19), t, { qing: true, vol: 0.12, pan: p }); bell(freq(21), t + 0.22, { qing: true, vol: 0.09, pan: p }); },
-    banner: (t, p) => { noiseSweep(t, 1.6, 300, 800, 400, 0.8, 0.14, p); drum(t + 0.1, { vol: 0.3, f: 110, pan: p }); },
+    banner: (t, p) => { noiseSweep(t, 1.6, 300, 800, 400, 0.8, 0.14, p); drum(t + 0.1, { vol: 0.3, f: 110, pan: p }); phrase('suona', [[4, 0.22], [4, 0.22], [7, 0.9, { acc: 1.1 }]], t + 0.4, { vol: 0.05, pan: p }); },   // 鼓吹：一通鼓，一声唢呐
     cart: (t, p) => { for (let k = 0; k < 4; k++) woodfish(t + k * 0.26, 300 - k * 14, 0.2); pluck('pipa', freq(4), t + 1.1, { vol: 0.24, pan: p }); },
-    horse: (t, p) => { for (let k = 0; k < 6; k++) woodfish(t + k * 0.17 + (k % 2) * 0.05, k % 2 ? 620 : 520, 0.22); },
+    horse: (t, p) => {                                 // 蹄声之后一声马嘶：二胡在高处急滑而下，如《赛马》
+      for (let k = 0; k < 6; k++) woodfish(t + k * 0.17 + (k % 2) * 0.05, k % 2 ? 620 : 520, 0.22);
+      sing('erhu', [[freq(14), 0.16, { grace: -5 }], [freq(16), 0.2, { slur: true }], [freq(14), 0.7, { fall: -9 }]], t + 1.1, { vol: 0.09, pan: p, vib: 2.2 });
+    },
     person: (t, p) => phrase('qin', [[0, 0.8], [2, 0.6], [-1, 1.6]], t, { vol: 0.6, pan: p, vib: 1 }),
     goddess: (t, p) => { gliss(t, 5, 16, 0.07, 0.26, p); phrase('xiao', [[9, 1.0], [11, 0.7], [9, 2.2]], t + 0.8, { vol: 0.14, pan: p }); },
     maple: (t, p) => { pluck('qin', freq(2), t, { vol: 0.6, pan: p, vib: 1 }); phrase('xiao', [[4, 0.9], [2, 0.7], [1, 1.8]], t + 0.4, { vol: 0.13, pan: p, fall: -2 }); },
@@ -324,13 +420,13 @@
     sea: (t, p) => { noiseSweep(t, 3.6, 200, 900, 240, 0.7, 0.3, p); gliss(t + 0.4, 0, 9, 0.11, 0.3, p); },
     city: (t, p) => { bell(freq(-5), t, { vol: 0.3, pan: p, long: 1.4 }); drum(t + 0.9, { vol: 0.4, f: 80, pan: p }); },
     leaf: (t, p) => phrase('zheng', [[9, 0.3], [7, 0.3], [5, 0.6]], t, { vol: 0.28, pan: p }),
-    phoenix: (t, p) => { phrase('di', [[4, 0.2], [7, 0.2], [9, 0.3], [12, 0.9]], t, { vol: 0.14, pan: p }); gliss(t + 0.2, 5, 16, 0.06, 0.24, p); },
+    phoenix: (t, p) => { phrase('suona', [[4, 0.16], [7, 0.16], [9, 0.24], [7, 0.12, { grace: 2 }], [9, 1.0, { flutter: true }]], t, { vol: 0.055, pan: p }); gliss(t + 0.2, 5, 16, 0.06, 0.24, p); },   // 百鸟朝凤：唢呐学鸟，末音花舌
     egret: (t, p) => phrase('xiao', [[9, 0.9], [7, 1.6]], t, { vol: 0.12, pan: p }),
     bee: (t, p) => tremolo('pipa', 12, t, 0.9, 0.12, p),
     shrimp: (t, p) => { for (let k = 0; k < 4; k++) pluck('zheng', freq(12 + [0, 2, 1, 4][k]), t + k * 0.16, { vol: 0.2, pan: p + R(-0.2, 0.2) }); },
     tiger: (t, p) => { drum(t, { vol: 0.8, f: 60, pan: p }); noiseSweep(t, 1.6, 240, 110, 70, 0.6, 0.4, p, 'lowpass'); pluck('qin', freq(-7), t + 0.1, { vol: 0.7, pan: p, slide: -3 }); },
     sheep: (t, p) => { flute(freq(9), t, 0.5, { xiao: true, vol: 0.1, fall: -2, pan: p }); flute(freq(7), t + 0.7, 0.8, { xiao: true, vol: 0.09, fall: -3, pan: p }); },
-    rooster: (t, p) => { gliss(t, 9, 16, 0.07, 0.22, p); gliss(t + 0.26, 16, 19, 0.08, 0.5, p); gliss(t + 0.8, 19, 11, 0.06, 0.6, p); },
+    rooster: (t, p) => crow(t, p),
     dog: (t, p) => { woodfish(t, 300, 0.2); woodfish(t + 0.22, 260, 0.18); pluck('qin', freq(0), t + 0.5, { vol: 0.4, pan: p, slide: 2 }); },
     bow: (t, p) => { pluck('qin', freq(-5), t, { vol: 0.8, pan: p, slide: 7 }); noiseSweep(t + 0.5, 0.5, 3000, 900, 1600, 1.4, 0.1, p); },
     go: (t, p) => { woodfish(t, 620, 0.22); woodfish(t + 0.6, 540, 0.18); woodfish(t + 1.5, 660, 0.16); },
@@ -343,7 +439,7 @@
     pen: (t, p) => { pluck('qin', freq(4), t, { vol: 0.5, pan: p, slide: -2 }); woodfish(t + 0.5, 420, 0.14); },
     tea: (t, p) => { for (let k = 0; k < 3; k++) pluck('zheng', freq(9 + k * 2), t + k * 0.28, { vol: 0.2, pan: p }); bell(freq(16), t + 1, { qing: true, vol: 0.08, pan: p }); },
     incense: (t, p) => { bell(freq(9), t, { qing: true, vol: 0.1, pan: p }); phrase('xiao', [[2, 2.2]], t + 0.4, { vol: 0.1, pan: p }); },
-    tears: (t, p) => { for (let k = 0; k < 3; k++) pluck('zheng', freq(12 - k * 2), t + k * 0.7, { vol: 0.24, pan: p, bend: -2 }); },
+    tears: (t, p) => { for (let k = 0; k < 3; k++) pluck('zheng', freq(12 - k * 2), t + k * 0.7, { vol: 0.2, pan: p, bend: -2 }); phrase('erhu', [[4, 0.9], [2, 0.5], [1, 0.4], [0, 2.0, { fall: -1 }]], t + 0.5, { vol: 0.08, pan: p }); },   // 一句二胡，往下叹
     // —— 为演《春江花月夜》添的
     tide: (t, p) => { noiseSweep(t, 3.4, 240, 620, 180, 0.6, 0.2, p); noiseSweep(t + 2.2, 3, 200, 520, 160, 0.6, 0.14, -p); pluck('qin', freq(-5), t + 0.2, { vol: 0.6, pan: p, vib: 1 }); gliss(t + 1.3, 2, 9, 0.1, 0.2, p); }
   };
@@ -363,7 +459,7 @@
     youth: (t) => phrase('pipa', [[7, 0.2], [9, 0.2], [11, 0.2], [9, 0.2], [12, 0.4], [11, 0.2], [9, 0.2], [7, 0.5]], t, { vol: 0.28 }),  // 一曲红绡不知数
     dream: (t) => phrase('xiao', [[7, 1.2], [9, 0.8], [7, 2.2]], t, { vol: 0.11, fall: -2 }),                                             // 夜深忽梦少年事
     ape: (t) => { flute(freq(14), t, 1.4, { xiao: true, vol: 0.13, fall: -5 }); flute(freq(12), t + 1.7, 1.9, { xiao: true, vol: 0.11, fall: -7 }); },   // 猿哀鸣
-    crow: (t) => { gliss(t, 9, 16, 0.07, 0.22, 0); gliss(t + 0.26, 16, 19, 0.08, 0.5, 0); gliss(t + 0.8, 19, 11, 0.06, 0.6, 0); },                         // 雄鸡一声
+    crow: (t) => crow(t, 0),                                                                                                               // 雄鸡一声
     flute: (t) => phrase('di', [[4, 0.3], [5, 0.2], [4, 0.5], [2, 0.3], [4, 0.9]], t, { vol: 0.11, vib: 0.03 }),                          // 山歌与村笛
     urgent: (t) => { for (let k = 0; k < 28; k++) pluck('pipa', freq([7, 9, 7, 5][k % 4] + (k > 15 ? 2 : 0)), t + 2.8 * (1 - Math.pow(1 - k / 28, 1.6)), { vol: 0.2 + k * 0.008 }); },   // 却坐促弦弦转急
     weep: (t) => phrase('xiao', [[4, 1.4], [2, 1.0], [0, 2.4]], t, { vol: 0.13, fall: -2 }),                                              // 江州司马青衫湿
@@ -423,18 +519,30 @@
     fire: (t) => BLOOM.fire(t, 0),
     crackle: (t) => noiseSweep(t, 0.04, 2500, 5000, 3000, 2, R(0.03, 0.09), R(-0.3, 0.3)),
     sword: (t, d) => { noiseSweep(t, 0.3, 1600, 7200, 3000, 2.4, 0.4, d.pan); for (let k = 0; k < 4; k++) pluck('pipa', freq(5 + k * 2), t + 0.04 + k * 0.022, { vol: 0.38, pan: d.pan }); },
-    season: (t, d) => { A.mode = MODES[d.ch] || 0; gliss(t + 0.05, 0, 10, 0.1, 0.32, 0); },
+    season: (t, d) => {
+      A.mode = MODES[d.ch] || 0; A.tune = null;
+      gliss(t + 0.05, 0, 10, 0.1, 0.32, 0);
+      sing('strings', [[freq(0), 4.2]], t + 0.3, { vol: 0.05, pan: -0.3 }); sing('strings', [[freq(support()), 3.8]], t + 0.7, { vol: 0.04, pan: 0.3 });
+    },
     night: (t) => BLOOM.night(t),
     day: (t) => BLOOM.day(t),
-    clear: (t) => { A.mode = 0; bell(freq(10), t, { qing: true, vol: 0.22 }); },
+    clear: (t) => { A.mode = 0; A.tune = null; bell(freq(10), t, { qing: true, vol: 0.22 }); },
     // 溯源每退一体，木鱼一声，一声比一声低：时光倒流
     stage: (t, d) => woodfish(t, freq(14 - d.idx * 2) * 2, 0.16),
     // 落笔之声：平声长而直，仄声短而折
-    tone: (t, d) => pluck('qin', freq(d.i), t, d.tone === '仄' ? { vol: 0.55, bend: -2 } : { vol: 0.55, vib: 1 }),
+    tone: (t, d) => {
+      const r = Math.random(), i = d.i + (r < 0.2 ? 5 : 0);                                         // 偶尔翻高八度
+      if (d.tone !== '仄') { if (r > 0.82) { harmonic(freq(i + 5), t, { vol: 0.2 }); pluck('qin', freq(i), t, { vol: 0.3 }); } else pluck('qin', freq(i), t, { vol: 0.55, vib: 1 }); }
+      else if (r < 0.4) pluck('qin', freq(i), t, { vol: 0.55, bend: -2 });                          // 去声：往下折
+      else if (r < 0.75) pluck('qin', freq(i), t, { vol: 0.55, slide: -2 });                        // 上声：自下而上
+      else { pluck('pipa', freq(i + 5), t, { vol: 0.34 }); pluck('qin', freq(i), t, { vol: 0.3 }); }   // 入声：短促一点
+    },
     // 对仗成了：上下句各一声，再合为五度
     pair: (t) => { pluck('zheng', freq(5), t, { vol: 0.42, pan: -0.4 }); pluck('zheng', freq(8), t + 0.42, { vol: 0.42, pan: 0.4 }); bell(freq(0), t + 0.84, { vol: 0.18 }); pluck('zheng', freq(5), t + 0.86, { vol: 0.3 }); pluck('zheng', freq(8), t + 0.86, { vol: 0.3 }); },
     ink: (t, d) => pluck('qin', freq(d.i), t, { vol: 0.28, pan: d.pan, slide: d.i % 2 ? 2 : -2 }),
-    splash: (t, d) => noiseSweep(t, 0.5, 700, 2400, 900, 0.8, 0.14, d.pan)
+    splash: (t, d) => noiseSweep(t, 0.5, 700, 2400, 900, 0.8, 0.14, d.pan),
+    // 沙声：手指划过、撒沙、一掌抹去——都是「沙沙」，长短轻重不同
+    sand: (t, d) => { const dur = d.dur || 0.3, v = d.vol == null ? 0.06 : d.vol; noiseSweep(t, dur, 2400, 5200 + Math.random() * 1400, 3200, 0.7, v, d.pan); noiseSweep(t + dur * 0.15, dur * 0.8, 6000, 9000, 7000, 1.2, v * 0.5, d.pan); }
   };
   // 这些灵一出世就自己发声（world.emit），不必再奏一遍
   const SELF = { boat: 1, tower: 1, lantern: 1, fire: 1, butterfly: 1, flute: 1 };
@@ -444,21 +552,115 @@
     const f = EVENT[type];
     if (f) { try { f(now() + 0.02, data || {}); } catch (e) { A.lastError = type + ': ' + e.message; /* 声音出错不应打断画面 */ } }
   };
+  /* 同一个字，每次落下来的那一声都略有不同：在五声里上下移几级、快一点慢一点、音高差几音分 */
+  function vary() {
+    const r = Math.random();
+    A.shift = r < 0.46 ? 0 : r < 0.64 ? 1 : r < 0.82 ? -1 : r < 0.91 ? 2 : -2;
+    A.rate = R(0.86, 1.18); A.cents = R(-6, 6);
+  }
+  function plain() { A.shift = 0; A.rate = 1; A.cents = 0; }
   A.bloom = function (kind, pan) {
     if (!A.enabled || !A.ready || SELF[kind]) return;
     const f = BLOOM[kind];
-    if (f) { try { f(now() + 0.02, pan || 0); } catch (e) { A.lastError = kind + ': ' + e.message; } }
+    if (!f) return;
+    vary();
+    try { f(now() + 0.02, pan || 0); } catch (e) { A.lastError = kind + ': ' + e.message; }
+    plain();
   };
 
-  /* 底乐：一张古琴在远处自弹——在五声里信步，疏疏几声 */
+  /* ---------- 底乐 ----------
+   * 平时是散板：一张古琴在远处信手几声。隔一阵起一支小曲（四句，起承转合），奏完又散。
+   */
+  const pick = (a) => a[(Math.random() * a.length) | 0];
+  const BAR = [[1, 1, 1, 1], [1, 0.5, 0.5, 2], [1.5, 0.5, 1, 1], [0.5, 0.5, 1, 1, 1], [1, 1, 2], [0.5, 0.5, 0.5, 0.5, 1, 1], [1, 0.5, 0.5, 1, 1]];   // 一小节四拍
+  const CAD = [[1, 1, 2], [0.5, 0.5, 1, 2], [1.5, 0.5, 2], [1, 0.5, 0.5, 2]];                                                                   // 句末一小节：落在长音上
+  /* 一句：从 start 起，级进为主、偶有跳进，越到句末越往 end 靠；倒数第二音挨着落音 */
+  function line(start, end, lo, hi) {
+    const rh = pick(BAR).concat(pick(CAD)), notes = [];
+    let cur = start;
+    for (let n = 0; n < rh.length; n++) {
+      if (n === rh.length - 1) cur = end;
+      else if (n === rh.length - 2) cur = end + (Math.random() < 0.6 ? 1 : -1);
+      else if (n > 0) {
+        const toward = Math.sign(end - cur) || (Math.random() < 0.5 ? 1 : -1), r = Math.random();
+        const dir = Math.random() < 0.3 + 0.5 * n / rh.length ? toward : -toward;
+        cur = Math.max(lo, Math.min(hi, cur + dir * (r < 0.74 ? 1 : r < 0.93 ? 2 : 3)));
+      }
+      notes.push([cur, rh[n]]);
+    }
+    return notes;
+  }
+  /* 加花：长音拆成带邻音的小音型 */
+  function flower(notes) {
+    const res = [];
+    for (const [i, d] of notes) {
+      const r = Math.random();
+      if (d >= 1 && r < 0.42) { const nb = i + (Math.random() < 0.5 ? 1 : -1); if (r < 0.2) res.push([i, d / 2], [nb, d / 4], [i, d / 4]); else res.push([i, d / 2], [nb, d / 2]); }
+      else res.push([i, d]);
+    }
+    return res;
+  }
+  function startTune(world) {
+    if (Math.random() < 0.65) {                                         // 旋宫：沿五度圈挪一步
+      A.key = Math.max(0, Math.min(4, A.key + (Math.random() < 0.5 ? -1 : 1)));
+      A.gong = KEYS[A.key][0];
+    }
+    const sup = support(), night = world.night, cold = world.season === '冬';
+    const festive = !night && !cold && (world.has('drum') || world.has('banner') || world.has('dragon') || world.has('phoenix'));
+    const lead = festive ? 'suona' : night ? pick(['xiao', 'erhu', 'erhu']) : world.has('water') ? pick(['zheng', 'erhu', 'di']) : pick(['erhu', 'di', 'pipa', 'zheng']);
+    const qi = line(pick([0, 0, sup]), pick([sup, 2, 1]), -1, 6);        // 起
+    const cheng = line(qi[qi.length - 1][0], pick([1, sup, 4].filter((x) => x !== qi[qi.length - 1][0])), -2, 6);   // 承：接着上句的末音起（鱼咬尾）
+    const zhuan = line(cheng[cheng.length - 1][0] + pick([2, 3, 4]), pick([4, 2, sup + 2]), 2, 9);                 // 转：翻高
+    const he = line(zhuan[zhuan.length - 1][0], 0, -2, 6);               // 合：落回主音
+    he[he.length - 1][1] *= 1.5;
+    A.tune = { ph: [qi, cheng, zhuan, he], k: 0, lead, sup, festive, rep: Math.random() < 0.5 ? 1 : 0,
+      beat: festive ? R(0.36, 0.44) : (night || cold || lead === 'xiao') ? R(0.62, 0.8) : R(0.44, 0.58),
+      name: KEYS[A.key][1] + '宫 · ' + MODE_NAME[A.mode] + '调式 · ' + lead };
+  }
+  function playLine(t) {
+    const T = A.tune, b = T.beat, last = T.k === T.ph.length - 1;
+    const notes = T.ph[T.k], len = notes.reduce((a, n) => a + n[1], 0) * b, lead = T.lead;
+    if (TIMBRE[lead]) {
+      sing(lead, notes.map(([i, d], n) => [freq(i + 5), d * b, { bow: n === 0, grace: lead === 'suona' && d >= 1 && Math.random() < 0.4 ? pick([-2, 2]) : undefined, flutter: lead === 'suona' && last && n === notes.length - 1, fall: last && n === notes.length - 1 && lead === 'erhu' ? -0.6 : 0 }]), t, { vol: lead === 'suona' ? 0.045 : 0.085, pan: 0.15 });
+    } else {
+      let s = t;
+      for (const [i, d] of notes) {
+        if (lead === 'di') flute(freq(i + 10), s, d * b * 0.92, { vol: 0.075, grace: Math.random() < 0.4 ? -2 : 0, pan: 0.15 });
+        else if (lead === 'xiao') flute(freq(i + 5), s, d * b * 0.96, { xiao: true, vol: 0.08, pan: 0.15 });
+        else if (lead === 'pipa' && d >= 2) tremolo('pipa', i + 5, s, d * b * 0.8, 0.13, 0.15);                       // 长音用轮指
+        else pluck(lead, freq(i + 5), s, { vol: lead === 'pipa' ? 0.24 : 0.26, pan: 0.15, bend: d >= 1.5 && Math.random() < 0.3 ? 2 : 0 });
+        s += d * b;
+      }
+    }
+    // 伴奏：古琴点在板上（每小节头一拍），弦乐垫主音与支持音；唢呐领奏时是吹打——鼓在板，木鱼在眼
+    const bars = Math.round(len / (4 * b));
+    for (let k = 0; k < bars; k++) {
+      const at = t + k * 4 * b;
+      pluck('qin', freq((k === bars - 1 && !last ? T.sup : 0) - 5), at, { vol: 0.24, pan: -0.25, vib: 1 });
+      if (T.festive) { drum(at, { vol: 0.26, f: 100, pan: -0.2 }); for (let j = 1; j < 4; j++) woodfish(at + j * b, j === 2 ? 520 : 600, 0.06); }
+    }
+    if (!T.festive && (lead === 'erhu' || lead === 'xiao' || Math.random() < 0.5)) {
+      sing('strings', [[freq(0), len]], t, { vol: 0.035, pan: -0.35 }); sing('strings', [[freq(last ? 5 : T.sup), len]], t + 0.2, { vol: 0.028, pan: 0.35 });
+    }
+    T.k++;
+    if (T.k >= T.ph.length) {
+      if (T.rep-- > 0) { T.k = 0; T.ph = T.ph.map((p, n) => (n === 3 ? p : flower(p))); if (!T.festive && Math.random() < 0.5) T.lead = pick(['erhu', 'zheng', 'di', 'xiao'].filter((x) => x !== T.lead)); A.nextNote = len + b * 2; }   // 再奏一遍：加花，或换一件乐器来答
+      else { A.tune = null; A.idle = 0; A.gap = 3 + ((Math.random() * 4) | 0); A.nextNote = len + R(5, 10); }
+    } else A.nextNote = len;
+  }
   A.tick = function (dt, world) {
     if (!A.enabled || !A.ready) return;
     A.nextNote -= dt;
     if (A.nextNote > 0) return;
     const t = now() + 0.05, busy = Math.min(1, world.ents.length / 12);
+    const quiet = MS.Scroll && MS.Scroll.active;                         // 卷中自有曲段，不起小曲
+    if (quiet) A.tune = null;
+    if (A.tune) { try { playLine(t); } catch (e) { A.lastError = 'tune: ' + e.message; A.tune = null; A.nextNote = 4; } return; }
+    if (!quiet && world.ents.length >= 2 && ++A.idle > A.gap) { startTune(world); A.nextNote = 0.6; return; }
     A.walk = Math.max(-3, Math.min(9, A.walk + [-2, -1, -1, 1, 1, 2, 3, -3][(Math.random() * 8) | 0]));
     const night = world.night, r = Math.random();
     if (night && r < 0.3) flute(freq(A.walk + 3), t, R(1.4, 2.6), { xiao: true, vol: 0.07, fall: r < 0.1 ? -2 : 0 });
+    else if (night && r < 0.42) sing('erhu', [[freq(A.walk + 5), R(1.2, 1.8)], [freq(A.walk + 4), R(1.6, 2.4), { fall: -0.5 }]], t, { vol: 0.06 });   // 夜里远远一声二胡
     else if (world.has('water') && r < 0.45) { pluck('zheng', freq(A.walk + 5), t, { vol: 0.2, bend: r < 0.2 ? 2 : 0 }); if (r < 0.15) pluck('zheng', freq(A.walk + 7), t + 0.3, { vol: 0.16 }); }
     else if (r > 0.86) harmonic(freq(A.walk + 10), t, { vol: 0.09 });
     else {
@@ -467,6 +669,17 @@
     }
     A.nextNote = R(2.6, 5.6) - busy * 1.2;
   };
+
+  /* 试听与调试：MS.Audio.demo('erhu' | 'suona' | 'strings' | 'tune') */
+  A.demo = function (what) {
+    if (!A.ready) return null;
+    const t = now() + 0.05;
+    if (what === 'tune') { A.tune = null; A.idle = 99; A.nextNote = 0; return 'tune'; }
+    if (what === 'strings') { sing('strings', [[freq(0), 4]], t); sing('strings', [[freq(support()), 4]], t + 0.3); return what; }
+    return phrase(what, [[0, 0.5], [1, 0.5], [2, 0.5], [3, 0.5], [4, 0.5], [5, 1.2], [4, 0.4], [2, 0.4], [0, 1.6]], t, {}) - t;   // 宫商角徵羽，上去又下来
+  };
+  A.scale = () => [0, 1, 2, 3, 4, 5].map((i) => +freq(i).toFixed(2));
+  A.state = () => ({ gong: KEYS[A.key][1], mode: MODE_NAME[A.mode], tune: A.tune && A.tune.name });
 
   A.names = { events: Object.keys(EVENT), blooms: Object.keys(BLOOM) };
   MS.Audio = A;
